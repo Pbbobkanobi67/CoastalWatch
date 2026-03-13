@@ -983,9 +983,11 @@ function showTourStep() {
     balloon.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
     balloon.style.bottom = '';
   } else {
-    balloon.style.bottom = (window.innerHeight - rect.top + 10) + 'px';
+    // Position above the target; clamp so balloon never goes above viewport
+    const proposedTop = rect.top - 10 - balloon.offsetHeight;
+    balloon.style.top    = Math.max(10, proposedTop) + 'px';
     balloon.style.left   = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
-    balloon.style.top    = '';
+    balloon.style.bottom = '';
   }
   arrow.style.left = Math.min(30, rect.width / 2) + 'px';
 }
