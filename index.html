@@ -433,8 +433,7 @@ select.mo-sel:focus{outline:none}
       Captures both map panels and sends them to an AI model for satellite imagery comparison.
     </p>
     <div class="ai-provider-row" style="margin-bottom:6px">
-      <button class="ai-prov-btn active" id="provFree" onclick="setAiProvider('free')">Free</button>
-      <button class="ai-prov-btn" id="provGemini" onclick="setAiProvider('gemini')">Gemini</button>
+      <button class="ai-prov-btn active" id="provGemini" onclick="setAiProvider('gemini')">Gemini</button>
       <button class="ai-prov-btn" id="provAnthropic" onclick="setAiProvider('anthropic')">Anthropic</button>
     </div>
     <div class="ai-provider-row" style="margin-bottom:10px">
@@ -442,12 +441,12 @@ select.mo-sel:focus{outline:none}
       <button class="ai-prov-btn" id="scopeClip" onclick="setAiScope('clip')">Clip Region</button>
     </div>
     <p class="ai-note" id="aiScopeNote" style="display:none;color:var(--gold)"></p>
-    <div class="ai-key-row" id="aiKeyRow" style="display:none">
+    <div class="ai-key-row" id="aiKeyRow">
       <input type="password" id="aiKey" placeholder="Google AI key — get free at aistudio.google.com" autocomplete="off">
       <button class="ai-btn" onclick="saveAiKey()">Save</button>
     </div>
     <p id="aiKeyNote" class="ai-note">
-      Powered by Gemini via CoastalWatch proxy — no key needed. 10 req/hr limit.
+      Gemini is free (250 req/day). Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline">aistudio.google.com</a>. Key stored in localStorage only.
     </p>
     <button class="ai-btn" id="aiRunBtn" onclick="aiScope==='clip'?clipCompare():runAnalysis()" style="width:100%">
       Run Analysis
@@ -1160,16 +1159,15 @@ function removeNdwi() {
 }
 
 // =====================================================
-//  AI CHANGE ANALYSIS (Gemini Free + Anthropic)
+//  AI CHANGE ANALYSIS (Gemini + Anthropic)
 // =====================================================
-let aiProvider = 'free'; // 'free' (default), 'gemini', or 'anthropic'
+let aiProvider = 'gemini'; // 'gemini' (default) or 'anthropic'
 let aiScope = 'full'; // 'full' or 'clip'
-const PROXY_URL = 'https://coastalwatch-ai.YOUR_SUBDOMAIN.workers.dev/analyze';
 
 function toggleAI() {
   const ov = document.getElementById('aiOverlay');
   ov.classList.toggle('open');
-  if (ov.classList.contains('open') && aiProvider !== 'free') {
+  if (ov.classList.contains('open')) {
     const storageKey = aiProvider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
     const saved = localStorage.getItem(storageKey);
     if (saved) document.getElementById('aiKey').value = saved;
@@ -1178,33 +1176,23 @@ function toggleAI() {
 
 function setAiProvider(provider) {
   aiProvider = provider;
-  document.getElementById('provFree').classList.toggle('active', provider === 'free');
   document.getElementById('provGemini').classList.toggle('active', provider === 'gemini');
   document.getElementById('provAnthropic').classList.toggle('active', provider === 'anthropic');
 
-  const keyRow = document.getElementById('aiKeyRow');
   const keyInput = document.getElementById('aiKey');
   const noteEl = document.getElementById('aiKeyNote');
 
-  if (provider === 'free') {
-    keyRow.style.display = 'none';
-    noteEl.innerHTML = 'Powered by Gemini via CoastalWatch proxy \u2014 no key needed. 10 req/hr limit.';
-  } else if (provider === 'gemini') {
-    keyRow.style.display = '';
+  if (provider === 'gemini') {
     keyInput.placeholder = 'Google AI key \u2014 get free at aistudio.google.com';
     noteEl.innerHTML = 'Gemini is free (250 req/day). Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline">aistudio.google.com</a>. Key stored in localStorage only.';
   } else {
-    keyRow.style.display = '';
     keyInput.placeholder = 'Anthropic API key (sk-ant-...)';
     noteEl.innerHTML = 'Key stored in localStorage only. Never sent anywhere except api.anthropic.com.';
   }
 
-  // Restore saved key for selected provider (skip for free)
-  if (provider !== 'free') {
-    const storageKey = provider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
-    const saved = localStorage.getItem(storageKey);
-    keyInput.value = saved || '';
-  }
+  const storageKey = provider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
+  const saved = localStorage.getItem(storageKey);
+  keyInput.value = saved || '';
   document.getElementById('aiStatus').textContent = '';
 }
 
@@ -1263,31 +1251,9 @@ async function callAiApi(key, img1, img2, prompt) {
   };
 
   let text, usageInfo;
-  const provLabel = aiProvider === 'free' ? 'Gemini (Free)' : aiProvider === 'gemini' ? 'Gemini' : 'Claude';
+  const provLabel = aiProvider === 'gemini' ? 'Gemini' : 'Claude';
 
-  if (aiProvider === 'free') {
-    if (PROXY_URL.includes('YOUR_SUBDOMAIN')) {
-      throw new Error('Free proxy not deployed yet. Switch to Gemini and use your own free key from aistudio.google.com');
-    }
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiBody)
-    });
-    if (response.status === 429) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'Rate limit reached \u2014 switch to Gemini tab and use your own free key from aistudio.google.com');
-    }
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `Proxy error ${response.status}`);
-    }
-    const data = await response.json();
-    text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received.';
-    const meta = data.usageMetadata;
-    usageInfo = meta ? `${meta.promptTokenCount || '?'} input / ${meta.candidatesTokenCount || '?'} output tokens` : '';
-
-  } else if (aiProvider === 'gemini') {
+  if (aiProvider === 'gemini') {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1350,7 +1316,6 @@ function renderMarkdown(text) {
 
 // Get current AI key (validates and returns it, or null)
 function getAiKey() {
-  if (aiProvider === 'free') return '';
   const storageKey = aiProvider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
   const key = localStorage.getItem(storageKey) || document.getElementById('aiKey').value.trim();
   if (!key) return null;
