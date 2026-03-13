@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoastalWatch — Multi-Decade Shoreline Analysis</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><polygon points='14,2 26,9 26,21 14,28 2,21 2,9' stroke='%2300e5cc' stroke-width='1.5' fill='%23050d18'/><circle cx='14' cy='14' r='4' fill='%2300e5cc'/></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -13,7 +14,7 @@
 :root{
   --ink:#050d18;--ink1:#071326;--ink2:#0a1a30;--ink3:#0e2040;
   --teal:#00e5cc;--gold:#f4b942;--red:#ff4f5e;--blue:#4da6ff;--lime:#7fff6a;
-  --txt:#8fb8cc;--muted:#2a4a60;--border:#0d2035;
+  --txt:#b0d4e8;--muted:#6a9ab5;--border:#0d2035;
   --lsat:#f4b942;--s2:#7fff6a;--mod:#4da6ff;
 }
 html,body{height:100%;overflow:hidden}
@@ -28,20 +29,21 @@ header{
 .brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .brand-icon{width:28px;height:28px;position:relative;flex-shrink:0}
 .brand-icon svg{width:100%;height:100%}
-.brand-name{font-family:'Syne Mono',monospace;font-size:13px;color:#fff;letter-spacing:4px;line-height:1}
-.brand-sub{font-family:'Syne Mono',monospace;font-size:7px;color:var(--teal);letter-spacing:3px;opacity:.7;text-transform:uppercase;margin-top:2px}
+.brand-name{font-family:'Syne Mono',monospace;font-size:14px;color:#fff;letter-spacing:4px;line-height:1}
+.brand-sub{font-family:'Syne Mono',monospace;font-size:9px;color:var(--teal);letter-spacing:3px;opacity:.85;text-transform:uppercase;margin-top:2px}
 
 .loc-wrap{flex:1;display:flex;justify-content:center}
 select.loc-sel{
   background:var(--ink2);border:1px solid var(--border);color:var(--txt);
-  font-family:'Barlow',sans-serif;font-size:12px;padding:5px 12px;
-  border-radius:2px;cursor:pointer;min-width:240px
+  font-family:'Barlow',sans-serif;font-size:13px;padding:6px 14px;
+  border-radius:2px;cursor:pointer;min-width:260px
 }
 select.loc-sel:focus{outline:none;border-color:var(--teal)}
-select.loc-sel option{background:var(--ink2)}
+select.loc-sel option{background:var(--ink2);padding:4px 8px}
+select.loc-sel optgroup{background:var(--ink1);color:var(--teal);font-style:normal;font-weight:600;font-size:12px}
 
 .hdr-right{display:flex;align-items:center;gap:14px}
-#coordDisp{font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);min-width:200px;text-align:right}
+#coordDisp{font-family:'Syne Mono',monospace;font-size:11px;color:var(--muted);min-width:200px;text-align:right}
 .pulse{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:blink 2s ease-in-out infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
 
@@ -53,16 +55,19 @@ select.loc-sel option{background:var(--ink2)}
 .tl-panel{flex:1;display:flex;flex-direction:column;border-right:2px solid var(--teal);min-width:0;overflow:hidden}
 .tl-panel:last-child{border-right:none}
 .tl-header{padding:5px 12px 4px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-.tl-label{font-family:'Syne Mono',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase}
+.tl-label{font-family:'Syne Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase}
 .tl-label.past{color:var(--gold)}
 .tl-label.present{color:var(--lime)}
-.epoch-strip{display:flex;align-items:center;gap:3px;padding:5px 10px;overflow-x:auto;scrollbar-width:none}
+.epoch-strip{display:flex;align-items:center;gap:3px;padding:5px 10px;overflow-x:auto;scrollbar-width:none;
+  mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent);
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent)
+}
 .epoch-strip::-webkit-scrollbar{display:none}
 
 .epoch-sep{width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0}
 .epoch-pill{
-  font-family:'Syne Mono',monospace;font-size:10px;font-weight:700;
-  padding:3px 7px;border-radius:2px;cursor:pointer;border:1px solid transparent;
+  font-family:'Syne Mono',monospace;font-size:11px;font-weight:700;
+  padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid transparent;
   transition:all .12s;white-space:nowrap;flex-shrink:0;letter-spacing:.5px
 }
 .epoch-pill.lsat{color:var(--gold);border-color:rgba(244,185,66,.25);background:rgba(244,185,66,.07)}
@@ -74,17 +79,17 @@ select.loc-sel option{background:var(--ink2)}
 .epoch-pill.sel{transform:scale(1.05)}
 
 .month-wrap{display:flex;align-items:center;gap:4px;margin-left:4px;flex-shrink:0}
-.month-wrap label{font-family:'Syne Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px}
+.month-wrap label{font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
 select.mo-sel{
   background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.4);
-  color:var(--blue);font-family:'Syne Mono',monospace;font-size:10px;
-  padding:2px 6px;border-radius:2px;cursor:pointer
+  color:var(--blue);font-family:'Syne Mono',monospace;font-size:11px;
+  padding:3px 7px;border-radius:2px;cursor:pointer
 }
 select.mo-sel:focus{outline:none}
 
 .grp-label{
-  font-family:'Syne Mono',monospace;font-size:7px;letter-spacing:2px;
-  opacity:.5;text-transform:uppercase;flex-shrink:0;padding:0 2px
+  font-family:'Syne Mono',monospace;font-size:9px;letter-spacing:2px;
+  opacity:.75;text-transform:uppercase;flex-shrink:0;padding:0 2px
 }
 .grp-label.lsat{color:var(--gold)}
 .grp-label.s2{color:var(--lime)}
@@ -100,8 +105,8 @@ select.mo-sel:focus{outline:none}
 .src-badge{
   position:absolute;top:9px;left:50%;transform:translateX(-50%);
   background:rgba(5,13,24,.88);border:1px solid;
-  font-family:'Syne Mono',monospace;font-size:9px;
-  padding:3px 12px;border-radius:2px;pointer-events:none;z-index:500;
+  font-family:'Syne Mono',monospace;font-size:11px;
+  padding:4px 14px;border-radius:2px;pointer-events:none;z-index:500;
   letter-spacing:1px;white-space:nowrap;transition:color .2s,border-color .2s
 }
 .src-badge.past{border-color:var(--gold);color:var(--gold)}
@@ -110,16 +115,16 @@ select.mo-sel:focus{outline:none}
 .res-badge{
   position:absolute;bottom:28px;right:8px;
   background:rgba(5,13,24,.8);border:1px solid var(--border);
-  font-family:'Syne Mono',monospace;font-size:8px;color:var(--muted);
-  padding:2px 7px;border-radius:2px;pointer-events:none;z-index:500;letter-spacing:.5px
+  font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted);
+  padding:3px 8px;border-radius:2px;pointer-events:none;z-index:500;letter-spacing:.5px
 }
 
 .tile-warn{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   background:rgba(5,13,24,.92);border:1px solid rgba(255,79,94,.4);
-  font-family:'Syne Mono',monospace;font-size:10px;color:var(--red);
-  padding:10px 16px;border-radius:3px;pointer-events:none;z-index:600;
-  text-align:center;line-height:1.6;display:none;max-width:240px
+  font-family:'Syne Mono',monospace;font-size:12px;color:var(--red);
+  padding:12px 18px;border-radius:3px;pointer-events:none;z-index:600;
+  text-align:center;line-height:1.6;display:none;max-width:280px
 }
 
 .map-view::after{
@@ -136,8 +141,8 @@ select.mo-sel:focus{outline:none}
 .yr-diff{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   background:var(--ink1);border:1px solid var(--teal);border-radius:20px;
-  font-family:'Syne Mono',monospace;font-size:9px;color:var(--teal);
-  padding:4px 12px;z-index:700;pointer-events:none;white-space:nowrap;
+  font-family:'Syne Mono',monospace;font-size:11px;color:var(--teal);
+  padding:5px 14px;z-index:700;pointer-events:none;white-space:nowrap;
   box-shadow:0 0 20px rgba(0,229,204,.15)
 }
 
@@ -150,7 +155,7 @@ select.mo-sel:focus{outline:none}
 .sep{height:20px;width:1px;background:var(--border);flex-shrink:0}
 .tbtn{
   background:var(--ink2);border:1px solid var(--border);color:var(--txt);
-  font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;
+  font-family:'Barlow',sans-serif;font-size:13px;font-weight:500;
   padding:5px 12px;border-radius:2px;cursor:pointer;
   display:flex;align-items:center;gap:5px;transition:all .12s;white-space:nowrap
 }
@@ -159,18 +164,22 @@ select.mo-sel:focus{outline:none}
 .tbtn.shore.active{background:rgba(127,255,106,.07);border-color:var(--lime);color:var(--lime)}
 .tbtn.danger:hover{border-color:var(--red);color:var(--red)}
 
-.hint{font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);flex:1;line-height:1.4;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hint-bar{
+  background:var(--ink1);border-top:1px solid var(--border);
+  padding:4px 14px;flex-shrink:0;display:flex;align-items:center;gap:12px
+}
+.hint{font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);flex:1;line-height:1.4}
 
 .results{display:flex;gap:18px}
 .ritem{text-align:right;display:none}
-.rlbl{font-family:'Syne Mono',monospace;font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.rlbl{font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
 .rval{font-family:'Syne Mono',monospace;font-size:14px;font-weight:700;line-height:1.2}
 .rval.c1{color:var(--teal)}
 .rval.c2{color:var(--gold)}
 .rval.c3{color:var(--lime)}
 
 .legend{display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0}
-.leg-item{display:flex;align-items:center;gap:4px;font-family:'Syne Mono',monospace;font-size:8px;opacity:.6}
+.leg-item{display:flex;align-items:center;gap:4px;font-family:'Syne Mono',monospace;font-size:10px;opacity:.8}
 .leg-dot{width:7px;height:7px;border-radius:1px;flex-shrink:0}
 
 /* ── HELP TOUR ── */
@@ -180,18 +189,18 @@ select.mo-sel:focus{outline:none}
 .tour-overlay.open{display:block}
 .tour-balloon{
   position:fixed;z-index:9001;background:var(--ink2);border:1px solid var(--teal);
-  border-radius:4px;padding:14px 18px;max-width:320px;
-  box-shadow:0 0 30px rgba(0,229,204,.2);color:var(--txt);font-size:13px;line-height:1.5
+  border-radius:4px;padding:16px 20px;max-width:380px;max-width:min(380px,calc(100vw - 20px));
+  box-shadow:0 0 30px rgba(0,229,204,.2);color:var(--txt);font-size:14px;line-height:1.6
 }
 .tour-balloon .tour-title{
-  font-family:'Syne Mono',monospace;font-size:10px;color:var(--teal);
-  letter-spacing:2px;text-transform:uppercase;margin-bottom:6px
+  font-family:'Syne Mono',monospace;font-size:12px;color:var(--teal);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px
 }
-.tour-balloon .tour-body{margin-bottom:12px}
+.tour-balloon .tour-body{margin-bottom:14px}
 .tour-balloon .tour-nav{display:flex;align-items:center;gap:8px}
-.tour-balloon .tour-nav .tbtn{font-size:11px;padding:3px 10px}
+.tour-balloon .tour-nav .tbtn{font-size:12px;padding:4px 12px}
 .tour-balloon .tour-progress{
-  font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto
+  font-family:'Syne Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto
 }
 .tour-arrow{
   position:absolute;width:0;height:0;
@@ -220,13 +229,13 @@ select.mo-sel:focus{outline:none}
   width:12px;height:12px;border-radius:50%;background:var(--teal);border:none;cursor:pointer
 }
 .blend-pct{
-  font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);min-width:28px
+  font-family:'Syne Mono',monospace;font-size:11px;color:var(--muted);min-width:28px
 }
 
 /* ── WATER INDEX ── */
 .ndwi-note{
-  font-family:'Syne Mono',monospace;font-size:8px;color:var(--blue);
-  letter-spacing:1px;opacity:.7
+  font-family:'Syne Mono',monospace;font-size:10px;color:var(--blue);
+  letter-spacing:1px;opacity:.8
 }
 
 /* ── AI ANALYSIS ── */
@@ -288,13 +297,39 @@ select.mo-sel:focus{outline:none}
 .ai-result ul{margin:8px 0;padding-left:20px}
 .ai-footer{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  header{height:auto;flex-wrap:wrap;padding:6px 10px;gap:6px}
+  .brand-name{font-size:12px;letter-spacing:2px}
+  .brand-sub{font-size:8px}
+  .loc-wrap{order:3;flex-basis:100%;justify-content:stretch}
+  select.loc-sel{min-width:0;width:100%;font-size:12px}
+  #coordDisp{font-size:9px;min-width:auto}
+  .maps-wrap{flex-direction:column}
+  .map-col+.map-col{border-left:none;border-top:2px solid var(--teal)}
+  .yr-diff{display:none!important}
+  .toolbar{gap:4px;padding:4px 8px}
+  .tbtn{font-size:11px;padding:4px 8px}
+  .hint-bar{padding:3px 8px}
+  .hint{font-size:11px}
+  .legend{display:none}
+}
+@media(max-width:540px){
+  .tl-panel{overflow-x:auto}
+  .epoch-pill{font-size:10px;padding:3px 6px}
+  .hdr-right{gap:6px}
+  #btnHelp{font-size:10px!important;padding:3px 8px!important}
+  .ai-panel{padding:14px 12px}
+  .tour-balloon{padding:12px 14px;font-size:13px}
+}
+
 /* Leaflet overrides */
 .leaflet-container{background:var(--ink)!important;font-family:'Barlow',sans-serif}
-.leaflet-control-attribution{background:rgba(5,13,24,.75)!important;color:var(--muted)!important;font-size:7px!important}
+.leaflet-control-attribution{background:rgba(5,13,24,.75)!important;color:var(--muted)!important;font-size:9px!important}
 .leaflet-control-attribution a{color:var(--muted)!important}
 .leaflet-control-zoom a{background:var(--ink2)!important;color:var(--txt)!important;border-color:var(--border)!important}
 .leaflet-control-zoom a:hover{background:var(--ink3)!important;color:var(--teal)!important}
-.leaflet-tooltip{background:rgba(5,13,24,.9);border:1px solid var(--border);color:var(--txt);font-family:'Syne Mono',monospace;font-size:9px;border-radius:2px}
+.leaflet-tooltip{background:rgba(5,13,24,.9);border:1px solid var(--border);color:var(--txt);font-family:'Syne Mono',monospace;font-size:11px;border-radius:2px;padding:4px 8px}
 </style>
 </head>
 <body>
@@ -437,8 +472,8 @@ select.mo-sel:focus{outline:none}
       <button class="ai-prov-btn" id="provAnthropic" onclick="setAiProvider('anthropic')">Anthropic</button>
     </div>
     <div class="ai-provider-row" style="margin-bottom:10px">
-      <button class="ai-prov-btn active" id="scopeFull" onclick="setAiScope('full')">Full Panel</button>
-      <button class="ai-prov-btn" id="scopeClip" onclick="setAiScope('clip')">Clip Region</button>
+      <button class="ai-prov-btn active" id="scopeFull" onclick="setAiScope('full')" style="border-radius:3px 0 0 3px">Full Panel</button>
+      <button class="ai-prov-btn" id="scopeClip" onclick="setAiScope('clip')" style="border-radius:0 3px 3px 0">Clip Region</button>
     </div>
     <p class="ai-note" id="aiScopeNote" style="display:none;color:var(--gold)"></p>
     <div class="ai-key-row" id="aiKeyRow">
@@ -495,16 +530,16 @@ select.mo-sel:focus{outline:none}
   <button class="tbtn" id="btnAI" onclick="toggleAI()">🤖 AI Analysis</button>
   <button class="tbtn" id="btnNdwi" onclick="toggleNdwi()">🌊 Water Index</button>
   <span class="ndwi-note" id="ndwiNote" style="display:none">NDVI PROXY — MODIS ERA ONLY</span>
-  <div class="sep"></div>
+</div>
+
+<div class="hint-bar">
   <div class="hint" id="hint">Select epochs on both panels above, then navigate to a coastline of interest.</div>
-  <div class="sep"></div>
   <div class="results">
     <div class="ritem" id="ri1"><div class="rlbl">Distance</div><div class="rval c1" id="rv1"></div></div>
     <div class="ritem" id="ri2"><div class="rlbl">Shore Δ</div><div class="rval c2" id="rv2"></div></div>
     <div class="ritem" id="ri3"><div class="rlbl">Rate/yr</div><div class="rval c2" id="rv3"></div></div>
     <div class="ritem" id="ri4"><div class="rlbl">Span</div><div class="rval c3" id="rv4"></div></div>
   </div>
-  <div class="sep"></div>
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div>Landsat 30m</div>
     <div class="leg-item"><div class="leg-dot" style="background:var(--lime)"></div>Sentinel-2 10m</div>
@@ -642,6 +677,11 @@ function applyEpoch(side) {
     if (loadCount > 2) warnEl.style.display = 'none';
   });
 
+  const badgeEl = document.getElementById(`badge${n}`);
+  badgeEl.textContent = 'Loading...';
+  badgeEl.style.opacity = '.5';
+
+  lyr.on('load', () => { badgeEl.style.opacity = '1'; });
   lyr.addTo(map);
   if (n === 1) lyr1 = lyr; else lyr2 = lyr;
 
@@ -751,6 +791,10 @@ function deactivate() {
   if (wasClip) {
     map1.dragging.enable();
     map2.dragging.enable();
+    if (clipBounds) {
+      setHint('Clip tool deactivated. Rectangle preserved — use AI Analysis → Clip Region to compare, or Clear to remove.');
+      return;
+    }
   }
   setHint('Navigate to a coastline → select epochs → use tools to measure change over time');
 }
@@ -771,7 +815,12 @@ function handleClick(n, ll) {
       if (measLine2) map2.removeLayer(measLine2);
       if (pts.length > 1) measLine2 = L.polyline(pts, { color: '#00e5cc', weight: 1.5, dashArray: '4,4', opacity: .8 }).addTo(map2);
     }
-    if (pts.length > 1) showR('ri1', 'rv1', fmtDist(totalDist(pts)));
+    if (pts.length > 1) {
+      showR('ri1', 'rv1', fmtDist(totalDist(pts)));
+      setHint(`📏 Distance: ${fmtDist(totalDist(pts))} (${pts.length} points). Click to add more points.`);
+    } else {
+      setHint('First point placed. Click again to measure distance.');
+    }
 
   } else if (activeTool === 'shore') {
     if (n === 1) {
@@ -934,12 +983,19 @@ function goLoc() {
 //  HELP TOUR
 // =====================================================
 const TOUR_STEPS = [
-  { target: '#locSel',     title: 'Location Selector', body: 'Choose from 26 monitored coastlines worldwide — atolls, barrier beaches, deltas, subsiding cities, and Arctic permafrost erosion sites.', arrow: 'up' },
-  { target: '#tlPast',     title: 'Past Epoch',        body: 'Click a year pill to load satellite imagery for the past (left) map panel. Gold = Landsat (30m), Blue = MODIS (250m).', arrow: 'up' },
-  { target: '#tlPresent',  title: 'Present Epoch',     body: 'Select a year for the present (right) panel. Green = Sentinel-2 (10m). MODIS years need a month selector.', arrow: 'up' },
-  { target: '#mv1',        title: 'Past Map',          body: 'Shows the earlier satellite image. Maps are synchronized — pan/zoom either and both move together.', arrow: 'down' },
-  { target: '#mv2',        title: 'Present Map',       body: 'Shows the later satellite image. Compare shorelines side-by-side to spot erosion, accretion, or subsidence.', arrow: 'down' },
-  { target: '.toolbar',    title: 'Toolbar',           body: 'Measure distances, calculate shoreline change rates, run a timelapse animation, blend layers, export screenshots, or toggle the water index overlay.', arrow: 'down' }
+  { target: '#locSel',     title: 'Location Selector', body: 'Choose from 26 monitored coastlines — atolls, barrier beaches, deltas, subsiding cities, and Arctic permafrost erosion sites.', arrow: 'up' },
+  { target: '#tlPast',     title: 'Past Epoch',        body: 'Click a year pill to load satellite imagery for the past (left) map. Gold = Landsat 30m, Blue = MODIS 250m.', arrow: 'up' },
+  { target: '#tlPresent',  title: 'Present Epoch',     body: 'Select a year for the present (right) panel. Green = Sentinel-2 10m. MODIS years need a month selector.', arrow: 'up' },
+  { target: '#mv1',        title: 'Past Map',          body: 'Shows the earlier satellite image. Both maps are synchronized — pan or zoom either and both move together.', arrow: 'down' },
+  { target: '#mv2',        title: 'Present Map',       body: 'Shows the later satellite image. Compare shorelines side-by-side to spot erosion, accretion, or land loss.', arrow: 'down' },
+  { target: '#btnAI',      title: 'AI Analysis',       body: 'Send both panels to Gemini or Claude for an AI-powered shoreline change report. Supports full panel or clipped region analysis.', arrow: 'down' },
+  { target: '#btnClip',    title: 'Clip Compare',      body: 'Draw a rectangle on either map to select a specific area, then send just that clip to AI for focused analysis. Great for pinpointing erosion.', arrow: 'down' },
+  { target: '#btnMeasure', title: 'Measure',           body: 'Click points on either map to measure distances. Running total shown in the status bar below.', arrow: 'down' },
+  { target: '#btnShore',   title: 'Shoreline Change',  body: 'Click past map to mark old shoreline, then present map for new shoreline. Calculates displacement and annual erosion rate.', arrow: 'down' },
+  { target: '#btnTlPlay',  title: 'Timelapse',         body: 'Animate through all satellite epochs on the past panel — watch decades of coastal change unfold at 1 frame per second.', arrow: 'down' },
+  { target: '#btnBlend',   title: 'Blend Overlay',     body: 'Overlays the present epoch onto the past map with adjustable opacity. Slide to reveal differences between time periods.', arrow: 'down' },
+  { target: '#btnExport',  title: 'Export PNG',        body: 'Captures both map panels as a high-resolution PNG screenshot for reports or presentations.', arrow: 'down' },
+  { target: '#btnNdwi',    title: 'Water Index',       body: 'Toggles a MODIS NDVI overlay as a water detection proxy. Available for 2003+ epochs only. Highlights vegetation and water boundaries.', arrow: 'down' }
 ];
 let tourStep = 0;
 
@@ -964,8 +1020,7 @@ function tourNav(dir) {
 function showTourStep() {
   const step = TOUR_STEPS[tourStep];
   const el = document.querySelector(step.target);
-  if (!el) return;
-  const rect = el.getBoundingClientRect();
+  if (!el) { tourNav(1); return; } // skip missing targets
   const balloon = document.getElementById('tourBalloon');
   const arrow = document.getElementById('tourArrow');
 
@@ -978,18 +1033,24 @@ function showTourStep() {
   balloon.style.display = 'block';
   arrow.className = 'tour-arrow ' + step.arrow;
 
-  if (step.arrow === 'up') {
-    balloon.style.top  = (rect.bottom + 10) + 'px';
-    balloon.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
+  // Use rAF so balloon has rendered and offsetHeight is accurate
+  requestAnimationFrame(() => {
+    const rect = el.getBoundingClientRect();
+    const bh = balloon.offsetHeight;
+    const bw = balloon.offsetWidth;
+    const maxLeft = window.innerWidth - bw - 10;
+
+    if (step.arrow === 'up') {
+      balloon.style.top  = (rect.bottom + 10) + 'px';
+      balloon.style.left = Math.max(10, Math.min(rect.left, maxLeft)) + 'px';
+    } else {
+      const proposedTop = rect.top - 10 - bh;
+      balloon.style.top  = Math.max(10, proposedTop) + 'px';
+      balloon.style.left = Math.max(10, Math.min(rect.left, maxLeft)) + 'px';
+    }
     balloon.style.bottom = '';
-  } else {
-    // Position above the target; clamp so balloon never goes above viewport
-    const proposedTop = rect.top - 10 - balloon.offsetHeight;
-    balloon.style.top    = Math.max(10, proposedTop) + 'px';
-    balloon.style.left   = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
-    balloon.style.bottom = '';
-  }
-  arrow.style.left = Math.min(30, rect.width / 2) + 'px';
+    arrow.style.left = Math.min(30, rect.width / 2) + 'px';
+  });
 }
 
 // =====================================================
@@ -1057,6 +1118,14 @@ function tlStep() {
 let blendActive = false, blendOverlayLyr = null;
 
 function toggleBlend() {
+  if (!blendActive && !state.present) {
+    setHint('Select a present epoch first — Blend overlays the present layer onto the past map.');
+    return;
+  }
+  if (!blendActive && !state.past) {
+    setHint('Select a past epoch first — Blend overlays the present layer onto the past map.');
+    return;
+  }
   blendActive = !blendActive;
   document.getElementById('btnBlend').classList.toggle('active', blendActive);
   document.getElementById('blendSlider').style.display = blendActive ? '' : 'none';
@@ -1064,8 +1133,10 @@ function toggleBlend() {
 
   if (blendActive) {
     applyBlendOverlay();
+    setHint('Blend active — slide to adjust present-epoch opacity on the past map.');
   } else {
     removeBlendOverlay();
+    setHint('Blend off.');
   }
 }
 
@@ -1101,7 +1172,10 @@ function exportPNG() {
   btn.disabled = true;
 
   const target = document.querySelector('.maps-wrap');
-  html2canvas(target, { useCORS: true, backgroundColor: '#050d18', scale: 2 }).then(canvas => {
+  html2canvas(target, { useCORS: true, allowTaint: false, backgroundColor: '#050d18', scale: 2 }).catch(() => {
+    // Fallback: allow tainted canvas (can't toDataURL, but try anyway)
+    return html2canvas(target, { allowTaint: true, backgroundColor: '#050d18', scale: 2 });
+  }).then(canvas => {
     const locSel = document.getElementById('locSel');
     const locName = (locSel.selectedOptions[0]?.text || 'map').replace(/[^a-z0-9]/gi, '-').toLowerCase();
     const pastYr  = state.past ? state.past.year : 'na';
@@ -1131,6 +1205,14 @@ function toggleNdwi() {
 
   if (ndwiActive) {
     applyNdwi();
+    // Warn if no eligible epoch is loaded
+    const pastOk = state.past && state.past.year >= 2003;
+    const presOk = state.present && state.present.year >= 2003;
+    if (!pastOk && !presOk) {
+      setHint('Water Index requires MODIS-era data (2003+). Select a 2003 or later epoch to see the overlay.');
+    } else if (!pastOk || !presOk) {
+      setHint('Water Index applied to ' + (pastOk ? 'past' : 'present') + ' panel only (other epoch is pre-2003).');
+    }
   } else {
     removeNdwi();
   }
