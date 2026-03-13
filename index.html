@@ -50,7 +50,7 @@ select.loc-sel option{background:var(--ink2)}
   background:var(--ink1);border-bottom:1px solid var(--border);
   padding:0;display:flex;flex-shrink:0;min-height:0
 }
-.tl-panel{flex:1;display:flex;flex-direction:column;border-right:2px solid var(--teal)}
+.tl-panel{flex:1;display:flex;flex-direction:column;border-right:2px solid var(--teal);min-width:0;overflow:hidden}
 .tl-panel:last-child{border-right:none}
 .tl-header{padding:5px 12px 4px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
 .tl-label{font-family:'Syne Mono',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase}
@@ -144,8 +144,8 @@ select.mo-sel:focus{outline:none}
 /* ── TOOLBAR ── */
 .toolbar{
   background:var(--ink1);border-top:1px solid var(--border);
-  padding:8px 16px;display:flex;align-items:center;gap:10px;
-  flex-shrink:0;z-index:1000
+  padding:6px 12px;display:flex;align-items:center;gap:6px;
+  flex-shrink:0;z-index:1000;flex-wrap:wrap
 }
 .sep{height:20px;width:1px;background:var(--border);flex-shrink:0}
 .tbtn{
@@ -159,7 +159,7 @@ select.mo-sel:focus{outline:none}
 .tbtn.shore.active{background:rgba(127,255,106,.07);border-color:var(--lime);color:var(--lime)}
 .tbtn.danger:hover{border-color:var(--red);color:var(--red)}
 
-.hint{font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);flex:1;line-height:1.4}
+.hint{font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);flex:1;line-height:1.4;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .results{display:flex;gap:18px}
 .ritem{text-align:right;display:none}
@@ -432,11 +432,16 @@ select.mo-sel:focus{outline:none}
     <p class="ai-desc">
       Captures both map panels and sends them to an AI model for satellite imagery comparison.
     </p>
-    <div class="ai-provider-row">
+    <div class="ai-provider-row" style="margin-bottom:6px">
       <button class="ai-prov-btn active" id="provFree" onclick="setAiProvider('free')">Free</button>
       <button class="ai-prov-btn" id="provGemini" onclick="setAiProvider('gemini')">Gemini</button>
       <button class="ai-prov-btn" id="provAnthropic" onclick="setAiProvider('anthropic')">Anthropic</button>
     </div>
+    <div class="ai-provider-row" style="margin-bottom:10px">
+      <button class="ai-prov-btn active" id="scopeFull" onclick="setAiScope('full')">Full Panel</button>
+      <button class="ai-prov-btn" id="scopeClip" onclick="setAiScope('clip')">Clip Region</button>
+    </div>
+    <p class="ai-note" id="aiScopeNote" style="display:none;color:var(--gold)"></p>
     <div class="ai-key-row" id="aiKeyRow" style="display:none">
       <input type="password" id="aiKey" placeholder="Google AI key — get free at aistudio.google.com" autocomplete="off">
       <button class="ai-btn" onclick="saveAiKey()">Save</button>
@@ -444,7 +449,7 @@ select.mo-sel:focus{outline:none}
     <p id="aiKeyNote" class="ai-note">
       Powered by Gemini via CoastalWatch proxy — no key needed. 10 req/hr limit.
     </p>
-    <button class="ai-btn" id="aiRunBtn" onclick="runAnalysis()" style="width:100%">
+    <button class="ai-btn" id="aiRunBtn" onclick="aiScope==='clip'?clipCompare():runAnalysis()" style="width:100%">
       Run Analysis
     </button>
     <div class="ai-status" id="aiStatus"></div>
@@ -1158,6 +1163,7 @@ function removeNdwi() {
 //  AI CHANGE ANALYSIS (Gemini Free + Anthropic)
 // =====================================================
 let aiProvider = 'free'; // 'free' (default), 'gemini', or 'anthropic'
+let aiScope = 'full'; // 'full' or 'clip'
 const PROXY_URL = 'https://coastalwatch-ai.YOUR_SUBDOMAIN.workers.dev/analyze';
 
 function toggleAI() {
@@ -1200,6 +1206,28 @@ function setAiProvider(provider) {
     keyInput.value = saved || '';
   }
   document.getElementById('aiStatus').textContent = '';
+}
+
+function setAiScope(scope) {
+  aiScope = scope;
+  document.getElementById('scopeFull').classList.toggle('active', scope === 'full');
+  document.getElementById('scopeClip').classList.toggle('active', scope === 'clip');
+  const noteEl = document.getElementById('aiScopeNote');
+  const runBtn = document.getElementById('aiRunBtn');
+  if (scope === 'clip') {
+    if (clipBounds) {
+      noteEl.textContent = 'Clip region selected \u2014 analysis will focus on the drawn rectangle.';
+      noteEl.style.display = '';
+      runBtn.textContent = 'Run Clip Analysis';
+    } else {
+      noteEl.textContent = 'No clip drawn yet. Use the \u2702 Clip Compare tool in the toolbar to draw a rectangle first.';
+      noteEl.style.display = '';
+      runBtn.textContent = 'Run Clip Analysis';
+    }
+  } else {
+    noteEl.style.display = 'none';
+    runBtn.textContent = 'Run Analysis';
+  }
 }
 
 function saveAiKey() {
