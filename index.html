@@ -1378,6 +1378,8 @@ Keep the analysis concise and actionable. Note any limitations due to image reso
 
     result.innerHTML = `<strong style="color:var(--teal)">${locName} \u2014 ${pastLabel} vs ${presentLabel}</strong> <span style="font-size:10px;color:#7aaac0">(${provLabel})</span><br><br>${renderMarkdown(text)}`;
     result.style.display = 'block';
+    result.scrollTop = 0;
+    document.getElementById('aiOverlay').scrollTop = 0;
     status.textContent = `Analysis complete \u00b7 ${provLabel} \u00b7 ${usageInfo}`;
 
   } catch (err) {
@@ -1456,6 +1458,8 @@ Be precise and focused \u2014 this is a targeted clip, not a full panel. The use
 
     result.innerHTML = `<strong style="color:var(--teal)">CLIP: ${locName} \u2014 ${pastLabel} vs ${presentLabel}</strong> <span style="font-size:10px;color:#7aaac0">(${provLabel} \u00b7 clipped region)</span><br><br>${renderMarkdown(text)}`;
     result.style.display = 'block';
+    result.scrollTop = 0;
+    document.getElementById('aiOverlay').scrollTop = 0;
     status.textContent = `Clip analysis complete \u00b7 ${provLabel} \u00b7 ${usageInfo}`;
 
   } catch (err) {
