@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoastalWatch — Multi-Decade Shoreline Analysis</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#050d18;--ink1:#071326;--ink2:#0a1a30;--ink3:#0e2040;
+  --teal:#00e5cc;--gold:#f4b942;--red:#ff4f5e;--blue:#4da6ff;--lime:#7fff6a;
+  --txt:#8fb8cc;--muted:#2a4a60;--border:#0d2035;
+  --lsat:#f4b942;--s2:#7fff6a;--mod:#4da6ff;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--ink);color:var(--txt);font-family:'Barlow',sans-serif;display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+header{
+  background:var(--ink1);border-bottom:1px solid var(--border);
+  height:52px;padding:0 16px;display:flex;align-items:center;gap:14px;
+  flex-shrink:0;z-index:1000
+}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brand-icon{width:28px;height:28px;position:relative;flex-shrink:0}
+.brand-icon svg{width:100%;height:100%}
+.brand-name{font-family:'Syne Mono',monospace;font-size:13px;color:#fff;letter-spacing:4px;line-height:1}
+.brand-sub{font-family:'Syne Mono',monospace;font-size:7px;color:var(--teal);letter-spacing:3px;opacity:.7;text-transform:uppercase;margin-top:2px}
+
+.loc-wrap{flex:1;display:flex;justify-content:center}
+select.loc-sel{
+  background:var(--ink2);border:1px solid var(--border);color:var(--txt);
+  font-family:'Barlow',sans-serif;font-size:12px;padding:5px 12px;
+  border-radius:2px;cursor:pointer;min-width:240px
+}
+select.loc-sel:focus{outline:none;border-color:var(--teal)}
+select.loc-sel option{background:var(--ink2)}
+
+.hdr-right{display:flex;align-items:center;gap:14px}
+#coordDisp{font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);min-width:200px;text-align:right}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:blink 2s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+
+/* ── TIMELINE ── */
+.timeline-bar{
+  background:var(--ink1);border-bottom:1px solid var(--border);
+  padding:0;display:flex;flex-shrink:0;min-height:0
+}
+.tl-panel{flex:1;display:flex;flex-direction:column;border-right:2px solid var(--teal)}
+.tl-panel:last-child{border-right:none}
+.tl-header{padding:5px 12px 4px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.tl-label{font-family:'Syne Mono',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase}
+.tl-label.past{color:var(--gold)}
+.tl-label.present{color:var(--lime)}
+.epoch-strip{display:flex;align-items:center;gap:3px;padding:5px 10px;overflow-x:auto;scrollbar-width:none}
+.epoch-strip::-webkit-scrollbar{display:none}
+
+.epoch-sep{width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0}
+.epoch-pill{
+  font-family:'Syne Mono',monospace;font-size:10px;font-weight:700;
+  padding:3px 7px;border-radius:2px;cursor:pointer;border:1px solid transparent;
+  transition:all .12s;white-space:nowrap;flex-shrink:0;letter-spacing:.5px
+}
+.epoch-pill.lsat{color:var(--gold);border-color:rgba(244,185,66,.25);background:rgba(244,185,66,.07)}
+.epoch-pill.lsat:hover,.epoch-pill.lsat.sel{background:rgba(244,185,66,.18);border-color:var(--gold)}
+.epoch-pill.s2{color:var(--lime);border-color:rgba(127,255,106,.25);background:rgba(127,255,106,.07)}
+.epoch-pill.s2:hover,.epoch-pill.s2.sel{background:rgba(127,255,106,.18);border-color:var(--lime)}
+.epoch-pill.mod{color:var(--blue);border-color:rgba(77,166,255,.25);background:rgba(77,166,255,.07)}
+.epoch-pill.mod:hover,.epoch-pill.mod.sel{background:rgba(77,166,255,.18);border-color:var(--blue)}
+.epoch-pill.sel{transform:scale(1.05)}
+
+.month-wrap{display:flex;align-items:center;gap:4px;margin-left:4px;flex-shrink:0}
+.month-wrap label{font-family:'Syne Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px}
+select.mo-sel{
+  background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.4);
+  color:var(--blue);font-family:'Syne Mono',monospace;font-size:10px;
+  padding:2px 6px;border-radius:2px;cursor:pointer
+}
+select.mo-sel:focus{outline:none}
+
+.grp-label{
+  font-family:'Syne Mono',monospace;font-size:7px;letter-spacing:2px;
+  opacity:.5;text-transform:uppercase;flex-shrink:0;padding:0 2px
+}
+.grp-label.lsat{color:var(--gold)}
+.grp-label.s2{color:var(--lime)}
+.grp-label.mod{color:var(--blue)}
+
+/* ── MAPS ── */
+.maps-wrap{flex:1;display:flex;min-height:0}
+.map-col{flex:1;display:flex;flex-direction:column;position:relative;min-width:0}
+.map-col+.map-col{border-left:2px solid var(--teal)}
+.map-view{flex:1;position:relative}
+#map1, #map2{position:absolute;inset:0}
+
+.src-badge{
+  position:absolute;top:9px;left:50%;transform:translateX(-50%);
+  background:rgba(5,13,24,.88);border:1px solid;
+  font-family:'Syne Mono',monospace;font-size:9px;
+  padding:3px 12px;border-radius:2px;pointer-events:none;z-index:500;
+  letter-spacing:1px;white-space:nowrap;transition:color .2s,border-color .2s
+}
+.src-badge.past{border-color:var(--gold);color:var(--gold)}
+.src-badge.present{border-color:var(--lime);color:var(--lime)}
+
+.res-badge{
+  position:absolute;bottom:28px;right:8px;
+  background:rgba(5,13,24,.8);border:1px solid var(--border);
+  font-family:'Syne Mono',monospace;font-size:8px;color:var(--muted);
+  padding:2px 7px;border-radius:2px;pointer-events:none;z-index:500;letter-spacing:.5px
+}
+
+.tile-warn{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(5,13,24,.92);border:1px solid rgba(255,79,94,.4);
+  font-family:'Syne Mono',monospace;font-size:10px;color:var(--red);
+  padding:10px 16px;border-radius:3px;pointer-events:none;z-index:600;
+  text-align:center;line-height:1.6;display:none;max-width:240px
+}
+
+.map-view::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:400;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px)
+}
+
+.cb{position:absolute;width:12px;height:12px;z-index:600;pointer-events:none}
+.cb.tl{top:4px;left:4px;border-top:1px solid var(--teal);border-left:1px solid var(--teal)}
+.cb.tr{top:4px;right:4px;border-top:1px solid var(--teal);border-right:1px solid var(--teal)}
+.cb.bl{bottom:4px;left:4px;border-bottom:1px solid var(--teal);border-left:1px solid var(--teal)}
+.cb.br{bottom:4px;right:4px;border-bottom:1px solid var(--teal);border-right:1px solid var(--teal)}
+
+.yr-diff{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:var(--ink1);border:1px solid var(--teal);border-radius:20px;
+  font-family:'Syne Mono',monospace;font-size:9px;color:var(--teal);
+  padding:4px 12px;z-index:700;pointer-events:none;white-space:nowrap;
+  box-shadow:0 0 20px rgba(0,229,204,.15)
+}
+
+/* ── TOOLBAR ── */
+.toolbar{
+  background:var(--ink1);border-top:1px solid var(--border);
+  padding:8px 16px;display:flex;align-items:center;gap:10px;
+  flex-shrink:0;z-index:1000
+}
+.sep{height:20px;width:1px;background:var(--border);flex-shrink:0}
+.tbtn{
+  background:var(--ink2);border:1px solid var(--border);color:var(--txt);
+  font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;
+  padding:5px 12px;border-radius:2px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;transition:all .12s;white-space:nowrap
+}
+.tbtn:hover{border-color:var(--teal);color:var(--teal)}
+.tbtn.active{background:rgba(0,229,204,.08);border-color:var(--teal);color:var(--teal)}
+.tbtn.shore.active{background:rgba(127,255,106,.07);border-color:var(--lime);color:var(--lime)}
+.tbtn.danger:hover{border-color:var(--red);color:var(--red)}
+
+.hint{font-family:'Barlow',sans-serif;font-size:11px;color:var(--muted);flex:1;line-height:1.4}
+
+.results{display:flex;gap:18px}
+.ritem{text-align:right;display:none}
+.rlbl{font-family:'Syne Mono',monospace;font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.rval{font-family:'Syne Mono',monospace;font-size:14px;font-weight:700;line-height:1.2}
+.rval.c1{color:var(--teal)}
+.rval.c2{color:var(--gold)}
+.rval.c3{color:var(--lime)}
+
+.legend{display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0}
+.leg-item{display:flex;align-items:center;gap:4px;font-family:'Syne Mono',monospace;font-size:8px;opacity:.6}
+.leg-dot{width:7px;height:7px;border-radius:1px;flex-shrink:0}
+
+/* ── HELP TOUR ── */
+.tour-overlay{
+  position:fixed;inset:0;background:rgba(5,13,24,.85);z-index:9000;display:none
+}
+.tour-overlay.open{display:block}
+.tour-balloon{
+  position:fixed;z-index:9001;background:var(--ink2);border:1px solid var(--teal);
+  border-radius:4px;padding:14px 18px;max-width:320px;
+  box-shadow:0 0 30px rgba(0,229,204,.2);color:var(--txt);font-size:13px;line-height:1.5
+}
+.tour-balloon .tour-title{
+  font-family:'Syne Mono',monospace;font-size:10px;color:var(--teal);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:6px
+}
+.tour-balloon .tour-body{margin-bottom:12px}
+.tour-balloon .tour-nav{display:flex;align-items:center;gap:8px}
+.tour-balloon .tour-nav .tbtn{font-size:11px;padding:3px 10px}
+.tour-balloon .tour-progress{
+  font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto
+}
+.tour-arrow{
+  position:absolute;width:0;height:0;
+  border-left:7px solid transparent;border-right:7px solid transparent
+}
+.tour-arrow.up{top:-7px;border-bottom:7px solid var(--teal)}
+.tour-arrow.down{bottom:-7px;border-top:7px solid var(--teal)}
+
+/* ── TIMELAPSE ── */
+@keyframes tlGlow{
+  0%,100%{box-shadow:0 0 4px rgba(0,229,204,.3)}
+  50%{box-shadow:0 0 12px rgba(0,229,204,.7)}
+}
+.epoch-pill.tl-active{animation:tlGlow 1s ease-in-out infinite}
+
+/* ── BLEND ── */
+.blend-slider{
+  -webkit-appearance:none;appearance:none;width:100px;height:4px;
+  background:var(--border);border-radius:2px;outline:none;cursor:pointer;vertical-align:middle
+}
+.blend-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+  background:var(--teal);cursor:pointer
+}
+.blend-slider::-moz-range-thumb{
+  width:12px;height:12px;border-radius:50%;background:var(--teal);border:none;cursor:pointer
+}
+.blend-pct{
+  font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);min-width:28px
+}
+
+/* ── WATER INDEX ── */
+.ndwi-note{
+  font-family:'Syne Mono',monospace;font-size:8px;color:var(--blue);
+  letter-spacing:1px;opacity:.7
+}
+
+/* ── AI ANALYSIS ── */
+.ai-overlay{
+  position:fixed;inset:0;background:rgba(5,13,24,.88);z-index:8000;display:none;
+  overflow-y:auto;padding:24px 16px
+}
+.ai-overlay.open{display:flex;justify-content:center;align-items:flex-start}
+.ai-panel{
+  background:#0e1e30;border:1px solid rgba(0,229,204,.5);border-radius:6px;
+  width:100%;max-width:640px;padding:20px 22px;box-shadow:0 0 40px rgba(0,229,204,.12)
+}
+.ai-panel h2{
+  font-family:'Syne Mono',monospace;font-size:13px;color:var(--teal);
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:8px
+}
+.ai-panel>.ai-desc{font-size:12px;color:#a0c4d8;margin-bottom:12px;line-height:1.4}
+.ai-provider-row{display:flex;gap:0;margin-bottom:10px}
+.ai-prov-btn{
+  font-family:'Syne Mono',monospace;font-size:11px;letter-spacing:1px;
+  padding:7px 20px;cursor:pointer;border:1px solid #1e3a52;
+  background:#0a1a2e;color:#7aaac0;transition:all .15s
+}
+.ai-prov-btn:first-child{border-radius:3px 0 0 3px}
+.ai-prov-btn:not(:first-child){border-left:none}
+.ai-prov-btn:last-child{border-radius:0 3px 3px 0}
+.ai-prov-btn.active{background:rgba(0,229,204,.15);border-color:var(--teal);color:var(--teal);font-weight:600}
+.ai-prov-btn:hover:not(.active){border-color:#3a6580;color:#c0dce8}
+.ai-key-row{display:flex;gap:8px;margin-bottom:12px}
+.ai-key-row input{
+  flex:1;background:#081420;border:1px solid #1e3a52;color:#d0e4f0;
+  font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;border-radius:3px
+}
+.ai-key-row input:focus{outline:none;border-color:var(--teal)}
+.ai-key-row input::placeholder{color:#4a7a90}
+.ai-btn{
+  background:rgba(0,229,204,.12);border:1px solid var(--teal);color:var(--teal);
+  font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
+  padding:9px 20px;border-radius:3px;cursor:pointer;transition:all .15s
+}
+.ai-btn:hover{background:rgba(0,229,204,.25)}
+.ai-btn:disabled{opacity:.4;cursor:not-allowed}
+.ai-btn.danger{border-color:var(--red);color:var(--red);background:rgba(255,79,94,.1)}
+.ai-btn.danger:hover{background:rgba(255,79,94,.2)}
+.ai-note{
+  font-family:'Syne Mono',monospace;font-size:10px;color:#6aa0b8;
+  margin-bottom:12px;letter-spacing:.5px;line-height:1.5
+}
+.ai-status{
+  font-family:'Syne Mono',monospace;font-size:10px;color:#80b0c8;
+  margin:10px 0;letter-spacing:1px
+}
+.ai-result{
+  background:#081420;border:1px solid #1e3a52;border-radius:4px;
+  padding:16px;margin-top:12px;font-size:13px;line-height:1.7;
+  color:#c0dce8;white-space:pre-wrap;max-height:45vh;overflow-y:auto;display:none
+}
+.ai-result h3,.ai-result strong{color:#e8f4ff}
+.ai-result ul{margin:8px 0;padding-left:20px}
+.ai-footer{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+
+/* Leaflet overrides */
+.leaflet-container{background:var(--ink)!important;font-family:'Barlow',sans-serif}
+.leaflet-control-attribution{background:rgba(5,13,24,.75)!important;color:var(--muted)!important;font-size:7px!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-control-zoom a{background:var(--ink2)!important;color:var(--txt)!important;border-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--ink3)!important;color:var(--teal)!important}
+.leaflet-tooltip{background:rgba(5,13,24,.9);border:1px solid var(--border);color:var(--txt);font-family:'Syne Mono',monospace;font-size:9px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 28 28" fill="none">
+        <polygon points="14,2 26,9 26,21 14,28 2,21 2,9" stroke="#00e5cc" stroke-width="1" fill="rgba(0,229,204,.06)"/>
+        <circle cx="14" cy="14" r="4" fill="#00e5cc" opacity=".8"/>
+        <line x1="14" y1="6" x2="14" y2="10" stroke="#00e5cc" stroke-width="1" opacity=".4"/>
+        <line x1="14" y1="18" x2="14" y2="22" stroke="#00e5cc" stroke-width="1" opacity=".4"/>
+        <line x1="6" y1="10" x2="10" y2="12" stroke="#00e5cc" stroke-width="1" opacity=".4"/>
+        <line x1="18" y1="16" x2="22" y2="18" stroke="#00e5cc" stroke-width="1" opacity=".4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">COASTALWATCH</div>
+      <div class="brand-sub">Multi-Decade Shoreline Analysis</div>
+    </div>
+  </div>
+
+  <div class="loc-wrap">
+    <select class="loc-sel" id="locSel" onchange="goLoc()">
+      <option value="">— SELECT MONITORED COASTLINE —</option>
+      <optgroup label="🌊 At-Risk Atolls">
+        <option value="4.1755,73.5093,11">Malé Atoll, Maldives</option>
+        <option value="-8.5167,179.1167,12">Funafuti Atoll, Tuvalu</option>
+        <option value="1.3667,172.9833,11">South Tarawa, Kiribati</option>
+      </optgroup>
+      <optgroup label="🏖 Barrier Beaches">
+        <option value="25.7907,-80.16,12" selected>Miami Beach, Florida</option>
+        <option value="-33.72,151.30,11">Narrabeen Beach, Sydney</option>
+        <option value="52.9,4.7,9">North Sea Coast, Netherlands</option>
+        <option value="35.6762,139.6503,10">Tokyo Bay Coast, Japan</option>
+      </optgroup>
+      <optgroup label="🌿 Deltas">
+        <option value="22.0,89.5,8">Ganges-Brahmaputra Delta, Bangladesh</option>
+        <option value="29.2,-89.4,9">Mississippi River Delta, Louisiana</option>
+        <option value="30.0,121.5,9">Yangtze Delta, China</option>
+        <option value="31.5,30.5,9">Nile Delta, Egypt</option>
+      </optgroup>
+      <optgroup label="🏙 Subsiding Cities">
+        <option value="45.4408,12.3155,11">Venice Lagoon, Italy</option>
+        <option value="6.455,3.384,10">Lagos Coast, Nigeria</option>
+        <option value="-6.2,106.8,10">Jakarta Coast, Indonesia</option>
+      </optgroup>
+      <optgroup label="🧊 Arctic Permafrost Erosion">
+        <option value="70.8318,-153.9461,11">Drew Point, Alaska</option>
+        <option value="70.1308,-143.6536,11">Barter Island, Alaska</option>
+        <option value="69.5710,-138.9040,11">Herschel Island, Yukon</option>
+        <option value="69.6340,-135.4370,11">Pelly Island, NWT</option>
+        <option value="69.4454,-133.0344,11">Tuktoyaktuk, NWT</option>
+        <option value="71.6200,129.9700,11">Muostakh Island, Siberia</option>
+        <option value="66.5598,-163.7256,10">Cape Espenberg, Alaska</option>
+        <option value="71.2906,-156.7886,11">Utqiagvik, Alaska</option>
+        <option value="78.2232,15.6267,11">Adventfjorden, Svalbard</option>
+        <option value="68.9500,-136.0000,9">Mackenzie Delta, NWT</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="hdr-right">
+    <button class="tbtn" id="btnHelp" onclick="startTour()" style="font-size:11px;padding:4px 10px">? Help</button>
+    <div class="pulse"></div>
+    <div id="coordDisp">Hover map for coordinates</div>
+  </div>
+</header>
+
+<!-- TIMELINE SELECTORS -->
+<div class="timeline-bar">
+  <div class="tl-panel" id="tlPast">
+    <div class="tl-header">
+      <span class="tl-label past">▸ Past Epoch</span>
+      <div class="month-wrap" id="mwPast" style="display:none">
+        <label>MO</label>
+        <select class="mo-sel" id="moPast" onchange="applyEpoch('past')">
+          <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+          <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+          <option value="07" selected>Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+      </div>
+    </div>
+    <div class="epoch-strip" id="stripPast"></div>
+  </div>
+
+  <div class="tl-panel" id="tlPresent">
+    <div class="tl-header">
+      <span class="tl-label present">▸ Present Epoch</span>
+      <div class="month-wrap" id="mwPresent" style="display:none">
+        <label>MO</label>
+        <select class="mo-sel" id="moPresent" onchange="applyEpoch('present')">
+          <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+          <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+          <option value="07" selected>Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+      </div>
+    </div>
+    <div class="epoch-strip" id="stripPresent"></div>
+  </div>
+</div>
+
+<!-- MAPS -->
+<div class="maps-wrap" style="position:relative">
+  <div class="map-col">
+    <div class="map-view" id="mv1">
+      <div id="map1"></div>
+      <div class="src-badge past" id="badge1">Select a past epoch above</div>
+      <div class="res-badge" id="res1">—</div>
+      <div class="tile-warn" id="warn1">⚠ Tiles unavailable for this epoch/region.<br>Try a different year or location.</div>
+      <div class="cb tl"></div><div class="cb tr"></div><div class="cb bl"></div><div class="cb br"></div>
+    </div>
+  </div>
+
+  <div class="yr-diff" id="yrDiff" style="display:none"></div>
+
+  <div class="map-col">
+    <div class="map-view" id="mv2">
+      <div id="map2"></div>
+      <div class="src-badge present" id="badge2">Select a present epoch above</div>
+      <div class="res-badge" id="res2">—</div>
+      <div class="tile-warn" id="warn2">⚠ Tiles unavailable for this epoch/region.<br>Try a different year or location.</div>
+      <div class="cb tl"></div><div class="cb tr"></div><div class="cb bl"></div><div class="cb br"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AI ANALYSIS OVERLAY -->
+<div class="ai-overlay" id="aiOverlay" onclick="if(event.target===this)toggleAI()">
+  <div class="ai-panel">
+    <h2>AI Change Analysis</h2>
+    <p class="ai-desc">
+      Captures both map panels and sends them to an AI model for satellite imagery comparison.
+    </p>
+    <div class="ai-provider-row">
+      <button class="ai-prov-btn active" id="provFree" onclick="setAiProvider('free')">Free</button>
+      <button class="ai-prov-btn" id="provGemini" onclick="setAiProvider('gemini')">Gemini</button>
+      <button class="ai-prov-btn" id="provAnthropic" onclick="setAiProvider('anthropic')">Anthropic</button>
+    </div>
+    <div class="ai-key-row" id="aiKeyRow" style="display:none">
+      <input type="password" id="aiKey" placeholder="Google AI key — get free at aistudio.google.com" autocomplete="off">
+      <button class="ai-btn" onclick="saveAiKey()">Save</button>
+    </div>
+    <p id="aiKeyNote" class="ai-note">
+      Powered by Gemini via CoastalWatch proxy — no key needed. 10 req/hr limit.
+    </p>
+    <button class="ai-btn" id="aiRunBtn" onclick="runAnalysis()" style="width:100%">
+      Run Analysis
+    </button>
+    <div class="ai-status" id="aiStatus"></div>
+    <div class="ai-result" id="aiResult"></div>
+    <div class="ai-footer">
+      <button class="ai-btn danger" onclick="toggleAI()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP TOUR OVERLAY -->
+<div class="tour-overlay" id="tourOverlay" onclick="if(event.target===this)closeTour()">
+  <div class="tour-balloon" id="tourBalloon" style="display:none">
+    <div class="tour-arrow up" id="tourArrow"></div>
+    <div class="tour-title" id="tourTitle"></div>
+    <div class="tour-body" id="tourBody"></div>
+    <div class="tour-nav">
+      <button class="tbtn" id="tourBack" onclick="tourNav(-1)">Back</button>
+      <button class="tbtn" id="tourNext" onclick="tourNav(1)">Next</button>
+      <button class="tbtn danger" onclick="closeTour()">Close</button>
+      <span class="tour-progress" id="tourProg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="tbtn" id="btnMeasure" onclick="activateTool('measure')">📏 Measure</button>
+  <button class="tbtn shore" id="btnShore" onclick="activateTool('shore')">🌊 Shoreline Δ</button>
+  <button class="tbtn danger" onclick="clearAll()">✕ Clear</button>
+  <div class="sep"></div>
+  <button class="tbtn" id="btnTlPlay" onclick="tlPlay()">▶ Timelapse</button>
+  <button class="tbtn" id="btnTlPause" onclick="tlPause()" style="display:none">⏸ Pause</button>
+  <button class="tbtn danger" id="btnTlStop" onclick="tlStop()" style="display:none">⏹ Stop</button>
+  <span class="blend-pct" id="tlCounter" style="display:none"></span>
+  <div class="sep"></div>
+  <button class="tbtn" id="btnBlend" onclick="toggleBlend()">🔀 Blend</button>
+  <input type="range" class="blend-slider" id="blendSlider" min="0" max="100" value="50" oninput="applyBlend(this.value)" style="display:none">
+  <span class="blend-pct" id="blendPct" style="display:none">50%</span>
+  <div class="sep"></div>
+  <button class="tbtn" id="btnExport" onclick="exportPNG()">📷 Export</button>
+  <button class="tbtn" id="btnClip" onclick="activateTool('clip')">✂ Clip Compare</button>
+  <button class="tbtn" id="btnClipCompare" onclick="clipCompare()" style="display:none">🔍 Compare Clip</button>
+  <button class="tbtn" id="btnAI" onclick="toggleAI()">🤖 AI Analysis</button>
+  <button class="tbtn" id="btnNdwi" onclick="toggleNdwi()">🌊 Water Index</button>
+  <span class="ndwi-note" id="ndwiNote" style="display:none">NDVI PROXY — MODIS ERA ONLY</span>
+  <div class="sep"></div>
+  <div class="hint" id="hint">Select epochs on both panels above, then navigate to a coastline of interest.</div>
+  <div class="sep"></div>
+  <div class="results">
+    <div class="ritem" id="ri1"><div class="rlbl">Distance</div><div class="rval c1" id="rv1"></div></div>
+    <div class="ritem" id="ri2"><div class="rlbl">Shore Δ</div><div class="rval c2" id="rv2"></div></div>
+    <div class="ritem" id="ri3"><div class="rlbl">Rate/yr</div><div class="rval c2" id="rv3"></div></div>
+    <div class="ritem" id="ri4"><div class="rlbl">Span</div><div class="rval c3" id="rv4"></div></div>
+  </div>
+  <div class="sep"></div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div>Landsat 30m</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--lime)"></div>Sentinel-2 10m</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>MODIS 250m</div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+//  EPOCH DEFINITIONS
+//  Sources:
+//   - Landsat WELD: NASA GIBS (free, no auth) 1984-2001 (9 available years)
+//   - MODIS Terra:  NASA GIBS (free, no auth) 2003-present
+//   - Sentinel-2:   EOX cloudless (free, non-commercial) 2018-2024
+// =====================================================
+
+const EPOCHS = [
+  // Landsat WELD global annual composites (30m)
+  // Available on GIBS: 1984, 1985, 1986, 1989, 1990, 1991, 1999, 2000, 2001
+  ...[1984, 1985, 1986, 1989, 1990, 1991].map(y => ({
+    year: y, type: 'lsat', label: String(y), maxZoom: 12, res: '30m · Landsat 5',
+    url: yr => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/${yr}-07-01/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpg`,
+    attr: 'NASA GIBS / Landsat WELD · earthdata.nasa.gov'
+  })),
+  ...[1999, 2000, 2001].map(y => ({
+    year: y, type: 'lsat', label: String(y), maxZoom: 12, res: '30m · Landsat 7',
+    url: yr => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/${yr}-07-01/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpg`,
+    attr: 'NASA GIBS / Landsat WELD · earthdata.nasa.gov'
+  })),
+
+  // MODIS Terra monthly (250m) — fill gap years
+  ...[2003,2004,2006,2007,2008,2009,2011,2012,2013,2014,2015,2016,2017].map(y => ({
+    year: y, type: 'mod', label: String(y), maxZoom: 9, res: '250m · MODIS Terra',
+    url: (yr, mo) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${yr}-${mo}-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+    attr: 'NASA GIBS / MODIS Terra · earthdata.nasa.gov',
+    needsMonth: true
+  })),
+
+  // EOX Sentinel-2 cloudless annual (10m)
+  ...[2018,2019,2020,2021,2022,2023,2024].map(y => ({
+    year: y, type: 's2', label: String(y), maxZoom: 14, res: '10m · Sentinel-2',
+    url: yr => `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${yr}_3857/default/g/{z}/{y}/{x}.jpg`,
+    attr: 'Sentinel-2 cloudless – s2maps.eu by EOX IT Services GmbH'
+  }))
+];
+
+EPOCHS.sort((a, b) => a.year - b.year);
+
+// =====================================================
+//  STATE
+// =====================================================
+const state = { past: null, present: null };
+
+// =====================================================
+//  BUILD TIMELINE STRIPS
+// =====================================================
+function buildStrips() {
+  ['past', 'present'].forEach(side => {
+    const strip = document.getElementById(`strip${side === 'past' ? 'Past' : 'Present'}`);
+    strip.innerHTML = '';
+
+    const groups = [
+      { key: 'lsat', label: 'LANDSAT',    epochs: EPOCHS.filter(e => e.type === 'lsat') },
+      { key: 'mod',  label: 'MODIS',      epochs: EPOCHS.filter(e => e.type === 'mod')  },
+      { key: 's2',   label: 'SENTINEL-2', epochs: EPOCHS.filter(e => e.type === 's2')   }
+    ];
+
+    groups.forEach((grp, gi) => {
+      if (gi > 0) {
+        const sep = document.createElement('div');
+        sep.className = 'epoch-sep';
+        strip.appendChild(sep);
+      }
+      const glbl = document.createElement('div');
+      glbl.className = `grp-label ${grp.key}`;
+      glbl.textContent = grp.label;
+      strip.appendChild(glbl);
+
+      grp.epochs.forEach(ep => {
+        const pill = document.createElement('div');
+        pill.className = `epoch-pill ${ep.type}`;
+        pill.textContent = ep.label;
+        pill.dataset.year = ep.year;
+        pill.dataset.side = side;
+        pill.onclick = () => selectEpoch(side, ep.year, pill);
+        strip.appendChild(pill);
+      });
+    });
+  });
+}
+
+function selectEpoch(side, year, pillEl) {
+  document.querySelectorAll(`.epoch-pill[data-side="${side}"]`).forEach(p => p.classList.remove('sel'));
+  pillEl.classList.add('sel');
+  pillEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  const ep = EPOCHS.find(e => e.year === year);
+  state[side] = { ...ep };
+  const mwId = side === 'past' ? 'mwPast' : 'mwPresent';
+  document.getElementById(mwId).style.display = ep.needsMonth ? 'flex' : 'none';
+  applyEpoch(side);
+}
+
+function applyEpoch(side) {
+  const ep = state[side];
+  if (!ep) return;
+
+  const n = side === 'past' ? 1 : 2;
+  const map = n === 1 ? map1 : map2;
+  const moEl = document.getElementById(side === 'past' ? 'moPast' : 'moPresent');
+  const mo = moEl ? moEl.value : '07';
+
+  const tileUrl = ep.needsMonth ? ep.url(ep.year, mo) : ep.url(ep.year);
+
+  if (n === 1 && lyr1) { map1.removeLayer(lyr1); lyr1 = null; }
+  if (n === 2 && lyr2) { map2.removeLayer(lyr2); lyr2 = null; }
+
+  const lyr = L.tileLayer(tileUrl, {
+    tileSize: 256,
+    maxZoom: ep.maxZoom,
+    noWrap: true,
+    attribution: ep.attr,
+    errorTileUrl: ''
+  });
+
+  let errCount = 0, loadCount = 0;
+  const warnEl = document.getElementById(`warn${n}`);
+  warnEl.style.display = 'none';
+
+  lyr.on('tileerror', () => {
+    errCount++;
+    if (errCount > 4 && loadCount < 2) warnEl.style.display = 'block';
+  });
+  lyr.on('tileload', () => {
+    loadCount++;
+    if (loadCount > 2) warnEl.style.display = 'none';
+  });
+
+  lyr.addTo(map);
+  if (n === 1) lyr1 = lyr; else lyr2 = lyr;
+
+  if (map.getZoom() > ep.maxZoom) map.setZoom(ep.maxZoom);
+
+  const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const moLabel = MONTHS[parseInt(mo)];
+  const dateStr = ep.needsMonth ? `${moLabel} ${ep.year}` : String(ep.year);
+  document.getElementById(`badge${n}`).textContent = `${dateStr}  ·  ${ep.res}`;
+  document.getElementById(`res${n}`).textContent = ep.res.split('·')[0].trim();
+
+  updateYrDiff();
+  recalcChange();
+
+  // v2.0 hooks — refresh blend overlay when present epoch changes
+  if (side === 'present' && blendActive) applyBlendOverlay();
+  // v2.0 hooks — refresh NDWI overlay when any epoch changes
+  if (ndwiActive) applyNdwi();
+}
+
+function updateYrDiff() {
+  const d = document.getElementById('yrDiff');
+  if (state.past && state.present) {
+    const span = Math.abs(state.present.year - state.past.year);
+    d.textContent = span > 0 ? `${span} year${span > 1 ? 's' : ''} apart` : 'Same year';
+    d.style.display = 'block';
+  } else {
+    d.style.display = 'none';
+  }
+}
+
+// =====================================================
+//  MAPS
+// =====================================================
+const CENTER = [25.7907, -80.16];
+const ZOOM   = 12;
+
+const map1 = L.map('map1', { center: CENTER, zoom: ZOOM, zoomControl: false });
+const map2 = L.map('map2', { center: CENTER, zoom: ZOOM, zoomControl: false });
+L.control.zoom({ position: 'topright' }).addTo(map1);
+L.control.zoom({ position: 'topright' }).addTo(map2);
+
+let lyr1 = null, lyr2 = null;
+
+// Sync both maps
+let syncing = false;
+map1.on('move', () => {
+  if (syncing) return; syncing = true;
+  map2.setView(map1.getCenter(), map1.getZoom(), { animate: false });
+  syncing = false;
+});
+map2.on('move', () => {
+  if (syncing) return; syncing = true;
+  map1.setView(map2.getCenter(), map2.getZoom(), { animate: false });
+  syncing = false;
+});
+
+[map1, map2].forEach(m => {
+  m.on('mousemove', e => {
+    const { lat, lng } = e.latlng;
+    document.getElementById('coordDisp').textContent =
+      `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? 'N' : 'S'}  ${Math.abs(lng).toFixed(4)}°${lng >= 0 ? 'E' : 'W'}  Z${m.getZoom()}`;
+  });
+});
+
+// =====================================================
+//  MEASUREMENT TOOLS
+// =====================================================
+let activeTool = null;
+let measPts1 = [], measPts2 = [], measLine1 = null, measLine2 = null, measMks = [];
+let shoreM1 = null, shoreM2 = null, shoreLine1 = null, shoreLine2 = null;
+
+// Clip Compare state
+let clipRect1 = null, clipRect2 = null;
+let clipBounds = null;
+let clipDrawing = false;
+let clipStartLL = null;
+let clipSourceMap = null;
+let clipTempRect = null;
+
+map1.on('click', e => handleClick(1, e.latlng));
+map2.on('click', e => handleClick(2, e.latlng));
+
+function activateTool(t) {
+  if (activeTool === t) { deactivate(); return; }
+  deactivate();
+  activeTool = t;
+  const btnMap = { measure: 'btnMeasure', shore: 'btnShore', clip: 'btnClip' };
+  if (btnMap[t]) document.getElementById(btnMap[t]).classList.add('active');
+  [map1, map2].forEach(m => m.getContainer().style.cursor = 'crosshair');
+  if (t === 'clip') {
+    map1.dragging.disable();
+    map2.dragging.disable();
+  }
+  setHint(t === 'measure'
+    ? 'Click either map to drop measurement points. Running distance shown below.'
+    : t === 'clip'
+    ? 'Click and drag a rectangle on either map to select an area for AI comparison.'
+    : '① Click LEFT (past) map to mark past shoreline  →  ② Click RIGHT (present) map to mark present shoreline');
+}
+
+function deactivate() {
+  const wasClip = activeTool === 'clip';
+  activeTool = null;
+  ['btnMeasure', 'btnShore', 'btnClip'].forEach(id => document.getElementById(id).classList.remove('active'));
+  [map1, map2].forEach(m => m.getContainer().style.cursor = '');
+  if (wasClip) {
+    map1.dragging.enable();
+    map2.dragging.enable();
+  }
+  setHint('Navigate to a coastline → select epochs → use tools to measure change over time');
+}
+
+function handleClick(n, ll) {
+  if (!activeTool || activeTool === 'clip') return;
+  const map = n === 1 ? map1 : map2;
+
+  if (activeTool === 'measure') {
+    const mk = L.circleMarker(ll, { radius: 4, fillColor: '#00e5cc', color: '#fff', weight: 1.5, fillOpacity: 1 }).addTo(map);
+    measMks.push({ map, mk });
+    if (n === 1) measPts1.push(ll); else measPts2.push(ll);
+    const pts = n === 1 ? measPts1 : measPts2;
+    if (n === 1) {
+      if (measLine1) map1.removeLayer(measLine1);
+      if (pts.length > 1) measLine1 = L.polyline(pts, { color: '#00e5cc', weight: 1.5, dashArray: '4,4', opacity: .8 }).addTo(map1);
+    } else {
+      if (measLine2) map2.removeLayer(measLine2);
+      if (pts.length > 1) measLine2 = L.polyline(pts, { color: '#00e5cc', weight: 1.5, dashArray: '4,4', opacity: .8 }).addTo(map2);
+    }
+    if (pts.length > 1) showR('ri1', 'rv1', fmtDist(totalDist(pts)));
+
+  } else if (activeTool === 'shore') {
+    if (n === 1) {
+      if (shoreM1) map1.removeLayer(shoreM1);
+      shoreM1 = L.circleMarker(ll, { radius: 10, fillColor: '#f4b942', color: '#fff', weight: 2, fillOpacity: .9 })
+        .bindTooltip('PAST', { direction: 'top' }).addTo(map1);
+      setHint('✓ Past shoreline marked.  ② Now click the RIGHT map to mark the PRESENT shoreline.');
+    } else {
+      if (shoreM2) map2.removeLayer(shoreM2);
+      shoreM2 = L.circleMarker(ll, { radius: 10, fillColor: '#7fff6a', color: '#fff', weight: 2, fillOpacity: .9 })
+        .bindTooltip('PRESENT', { direction: 'top' }).addTo(map2);
+    }
+    recalcChange();
+  }
+}
+
+// =====================================================
+//  CLIP COMPARE — rectangle drawing on maps
+// =====================================================
+function setupClipEvents(map, mapN) {
+  const container = map.getContainer();
+  container.addEventListener('mousedown', e => {
+    if (activeTool !== 'clip') return;
+    clipDrawing = true;
+    clipSourceMap = mapN;
+    clipStartLL = map.containerPointToLatLng([e.offsetX, e.offsetY]);
+    removeClipRects();
+  });
+  container.addEventListener('mousemove', e => {
+    if (!clipDrawing || activeTool !== 'clip' || clipSourceMap !== mapN) return;
+    const curLL = map.containerPointToLatLng([e.offsetX, e.offsetY]);
+    const bounds = L.latLngBounds(clipStartLL, curLL);
+    if (clipTempRect) map.removeLayer(clipTempRect);
+    clipTempRect = L.rectangle(bounds, { color: '#f4b942', weight: 2, fillOpacity: 0.15, dashArray: '5,5' }).addTo(map);
+  });
+  container.addEventListener('mouseup', e => {
+    if (!clipDrawing || activeTool !== 'clip' || clipSourceMap !== mapN) return;
+    clipDrawing = false;
+    const endLL = map.containerPointToLatLng([e.offsetX, e.offsetY]);
+    const bounds = L.latLngBounds(clipStartLL, endLL);
+    // Reject tiny accidental clicks
+    if (Math.abs(bounds.getNorth() - bounds.getSouth()) < 0.0001 &&
+        Math.abs(bounds.getEast() - bounds.getWest()) < 0.0001) {
+      if (clipTempRect) { map.removeLayer(clipTempRect); clipTempRect = null; }
+      return;
+    }
+    if (clipTempRect) { map.removeLayer(clipTempRect); clipTempRect = null; }
+    clipBounds = bounds;
+    clipRect1 = L.rectangle(bounds, { color: '#f4b942', weight: 2, fillOpacity: 0.12 }).addTo(map1);
+    clipRect2 = L.rectangle(bounds, { color: '#7fff6a', weight: 2, fillOpacity: 0.12 }).addTo(map2);
+    document.getElementById('btnClipCompare').style.display = '';
+    setHint('Rectangle selected. Click "Compare Clip" to send the clipped area to AI, or draw a new rectangle.');
+  });
+}
+setupClipEvents(map1, 1);
+setupClipEvents(map2, 2);
+
+function removeClipRects() {
+  if (clipRect1) { map1.removeLayer(clipRect1); clipRect1 = null; }
+  if (clipRect2) { map2.removeLayer(clipRect2); clipRect2 = null; }
+  if (clipTempRect) {
+    const srcMap = clipSourceMap === 1 ? map1 : map2;
+    srcMap.removeLayer(clipTempRect);
+    clipTempRect = null;
+  }
+  clipBounds = null;
+  document.getElementById('btnClipCompare').style.display = 'none';
+}
+
+async function captureClip(mapN) {
+  const map = mapN === 1 ? map1 : map2;
+  const panelEl = document.getElementById(mapN === 1 ? 'mv1' : 'mv2');
+  const canvas = await html2canvas(panelEl, {
+    useCORS: true, backgroundColor: '#050d18', scale: 1, logging: false
+  });
+  // Convert clip geo bounds to pixel coords on the map container
+  const nw = map.latLngToContainerPoint(clipBounds.getNorthWest());
+  const se = map.latLngToContainerPoint(clipBounds.getSouthEast());
+  const x = Math.max(0, Math.round(nw.x));
+  const y = Math.max(0, Math.round(nw.y));
+  const w = Math.min(canvas.width - x, Math.round(se.x - nw.x));
+  const h = Math.min(canvas.height - y, Math.round(se.y - nw.y));
+  // Crop
+  const crop = document.createElement('canvas');
+  crop.width = w; crop.height = h;
+  crop.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+  return crop.toDataURL('image/png').split(',')[1];
+}
+
+// =====================================================
+//  CALCULATIONS
+// =====================================================
+function haversine(a, b) {
+  const R = 6371000, r = d => d * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
+
+function totalDist(pts) {
+  let d = 0;
+  for (let i = 1; i < pts.length; i++) d += haversine(pts[i - 1], pts[i]);
+  return d;
+}
+
+function fmtDist(m) {
+  return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+}
+
+function recalcChange() {
+  if (!shoreM1 || !shoreM2) return;
+  const p1 = shoreM1.getLatLng(), p2 = shoreM2.getLatLng();
+  const dist = haversine(p1, p2);
+  const span = (state.past && state.present) ? Math.abs(state.present.year - state.past.year) : 0;
+
+  showR('ri2', 'rv2', fmtDist(dist));
+  if (span > 0) {
+    showR('ri3', 'rv3', `${fmtDist(dist / span)}/yr`);
+    showR('ri4', 'rv4', `${span} yr${span > 1 ? 's' : ''}`);
+    setHint(`📊 Shoreline shifted ${fmtDist(dist)} over ${span} years  (${fmtDist(dist / span)}/yr) · Gold = past · Green = present`);
+  }
+
+  [map1, map2].forEach((map, i) => {
+    if (i === 0 && shoreLine1) { map1.removeLayer(shoreLine1); }
+    if (i === 1 && shoreLine2) { map2.removeLayer(shoreLine2); }
+  });
+  shoreLine1 = L.polyline([p1, p2], { color: 'rgba(255,200,80,.4)', weight: 1.5, dashArray: '3,5' }).addTo(map1);
+  shoreLine2 = L.polyline([p1, p2], { color: 'rgba(255,200,80,.4)', weight: 1.5, dashArray: '3,5' }).addTo(map2);
+}
+
+function showR(wrapId, valId, txt) {
+  document.getElementById(wrapId).style.display = '';
+  document.getElementById(valId).textContent = txt;
+}
+
+function setHint(t) { document.getElementById('hint').textContent = t; }
+
+function clearAll() {
+  measPts1 = []; measPts2 = [];
+  if (measLine1) { map1.removeLayer(measLine1); measLine1 = null; }
+  if (measLine2) { map2.removeLayer(measLine2); measLine2 = null; }
+  measMks.forEach(({ map, mk }) => map.removeLayer(mk)); measMks = [];
+  if (shoreM1) { map1.removeLayer(shoreM1); shoreM1 = null; }
+  if (shoreM2) { map2.removeLayer(shoreM2); shoreM2 = null; }
+  if (shoreLine1) { map1.removeLayer(shoreLine1); shoreLine1 = null; }
+  if (shoreLine2) { map2.removeLayer(shoreLine2); shoreLine2 = null; }
+  removeClipRects();
+  ['ri1', 'ri2', 'ri3', 'ri4'].forEach(id => document.getElementById(id).style.display = 'none');
+  deactivate();
+}
+
+function goLoc() {
+  const v = document.getElementById('locSel').value;
+  if (!v) return;
+  const [lat, lng, z] = v.split(',').map(Number);
+  map1.setView([lat, lng], z);
+}
+
+// =====================================================
+//  HELP TOUR
+// =====================================================
+const TOUR_STEPS = [
+  { target: '#locSel',     title: 'Location Selector', body: 'Choose from 26 monitored coastlines worldwide — atolls, barrier beaches, deltas, subsiding cities, and Arctic permafrost erosion sites.', arrow: 'up' },
+  { target: '#tlPast',     title: 'Past Epoch',        body: 'Click a year pill to load satellite imagery for the past (left) map panel. Gold = Landsat (30m), Blue = MODIS (250m).', arrow: 'up' },
+  { target: '#tlPresent',  title: 'Present Epoch',     body: 'Select a year for the present (right) panel. Green = Sentinel-2 (10m). MODIS years need a month selector.', arrow: 'up' },
+  { target: '#mv1',        title: 'Past Map',          body: 'Shows the earlier satellite image. Maps are synchronized — pan/zoom either and both move together.', arrow: 'down' },
+  { target: '#mv2',        title: 'Present Map',       body: 'Shows the later satellite image. Compare shorelines side-by-side to spot erosion, accretion, or subsidence.', arrow: 'down' },
+  { target: '.toolbar',    title: 'Toolbar',           body: 'Measure distances, calculate shoreline change rates, run a timelapse animation, blend layers, export screenshots, or toggle the water index overlay.', arrow: 'down' }
+];
+let tourStep = 0;
+
+function startTour() {
+  tourStep = 0;
+  document.getElementById('tourOverlay').classList.add('open');
+  showTourStep();
+}
+
+function closeTour() {
+  document.getElementById('tourOverlay').classList.remove('open');
+  document.getElementById('tourBalloon').style.display = 'none';
+}
+
+function tourNav(dir) {
+  tourStep += dir;
+  if (tourStep < 0) tourStep = 0;
+  if (tourStep >= TOUR_STEPS.length) { closeTour(); return; }
+  showTourStep();
+}
+
+function showTourStep() {
+  const step = TOUR_STEPS[tourStep];
+  const el = document.querySelector(step.target);
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const balloon = document.getElementById('tourBalloon');
+  const arrow = document.getElementById('tourArrow');
+
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourBody').textContent = step.body;
+  document.getElementById('tourProg').textContent = `${tourStep + 1} / ${TOUR_STEPS.length}`;
+  document.getElementById('tourBack').style.display = tourStep === 0 ? 'none' : '';
+  document.getElementById('tourNext').textContent = tourStep === TOUR_STEPS.length - 1 ? 'Finish' : 'Next';
+
+  balloon.style.display = 'block';
+  arrow.className = 'tour-arrow ' + step.arrow;
+
+  if (step.arrow === 'up') {
+    balloon.style.top  = (rect.bottom + 10) + 'px';
+    balloon.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
+    balloon.style.bottom = '';
+  } else {
+    balloon.style.bottom = (window.innerHeight - rect.top + 10) + 'px';
+    balloon.style.left   = Math.max(10, Math.min(rect.left, window.innerWidth - 340)) + 'px';
+    balloon.style.top    = '';
+  }
+  arrow.style.left = Math.min(30, rect.width / 2) + 'px';
+}
+
+// =====================================================
+//  TIMELAPSE
+// =====================================================
+let tlTimer = null, tlIdx = 0, tlPaused = false;
+
+function tlPlay() {
+  if (tlPaused) { tlResume(); return; }
+  tlIdx = 0;
+  tlPaused = false;
+  document.getElementById('btnTlPlay').style.display  = 'none';
+  document.getElementById('btnTlPause').style.display = '';
+  document.getElementById('btnTlStop').style.display  = '';
+  document.getElementById('tlCounter').style.display  = '';
+  tlStep();
+}
+
+function tlResume() {
+  tlPaused = false;
+  document.getElementById('btnTlPlay').style.display  = 'none';
+  document.getElementById('btnTlPause').style.display = '';
+  tlStep();
+}
+
+function tlPause() {
+  tlPaused = true;
+  clearTimeout(tlTimer);
+  document.getElementById('btnTlPause').style.display = 'none';
+  document.getElementById('btnTlPlay').style.display  = '';
+  document.getElementById('btnTlPlay').textContent    = '▶ Resume';
+}
+
+function tlStop() {
+  clearTimeout(tlTimer);
+  tlPaused = false;
+  document.querySelectorAll('.epoch-pill.tl-active').forEach(p => p.classList.remove('tl-active'));
+  document.getElementById('btnTlPlay').style.display   = '';
+  document.getElementById('btnTlPlay').textContent     = '▶ Timelapse';
+  document.getElementById('btnTlPause').style.display  = 'none';
+  document.getElementById('btnTlStop').style.display   = 'none';
+  document.getElementById('tlCounter').style.display   = 'none';
+}
+
+function tlStep() {
+  if (tlIdx >= EPOCHS.length) { tlStop(); return; }
+  const ep = EPOCHS[tlIdx];
+  document.getElementById('tlCounter').textContent = `${tlIdx + 1}/${EPOCHS.length}`;
+
+  // Click the pill programmatically on the past side
+  const pill = document.querySelector(`.epoch-pill[data-year="${ep.year}"][data-side="past"]`);
+  if (pill) {
+    document.querySelectorAll('.epoch-pill.tl-active').forEach(p => p.classList.remove('tl-active'));
+    pill.classList.add('tl-active');
+    pill.click();
+    pill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+  tlIdx++;
+  tlTimer = setTimeout(tlStep, 1000);
+}
+
+// =====================================================
+//  OPACITY BLEND
+// =====================================================
+let blendActive = false, blendOverlayLyr = null;
+
+function toggleBlend() {
+  blendActive = !blendActive;
+  document.getElementById('btnBlend').classList.toggle('active', blendActive);
+  document.getElementById('blendSlider').style.display = blendActive ? '' : 'none';
+  document.getElementById('blendPct').style.display    = blendActive ? '' : 'none';
+
+  if (blendActive) {
+    applyBlendOverlay();
+  } else {
+    removeBlendOverlay();
+  }
+}
+
+function applyBlendOverlay() {
+  removeBlendOverlay();
+  const ep = state.present;
+  if (!ep) return;
+  const moEl = document.getElementById('moPresent');
+  const mo   = moEl ? moEl.value : '07';
+  const url  = ep.needsMonth ? ep.url(ep.year, mo) : ep.url(ep.year);
+  const opacity = parseInt(document.getElementById('blendSlider').value) / 100;
+
+  blendOverlayLyr = L.tileLayer(url, {
+    tileSize: 256, maxZoom: ep.maxZoom, noWrap: true, opacity: opacity, attribution: ''
+  }).addTo(map1);
+}
+
+function removeBlendOverlay() {
+  if (blendOverlayLyr) { map1.removeLayer(blendOverlayLyr); blendOverlayLyr = null; }
+}
+
+function applyBlend(val) {
+  document.getElementById('blendPct').textContent = val + '%';
+  if (blendOverlayLyr) blendOverlayLyr.setOpacity(val / 100);
+}
+
+// =====================================================
+//  EXPORT PNG
+// =====================================================
+function exportPNG() {
+  const btn = document.getElementById('btnExport');
+  btn.textContent = '⏳ Exporting...';
+  btn.disabled = true;
+
+  const target = document.querySelector('.maps-wrap');
+  html2canvas(target, { useCORS: true, backgroundColor: '#050d18', scale: 2 }).then(canvas => {
+    const locSel = document.getElementById('locSel');
+    const locName = (locSel.selectedOptions[0]?.text || 'map').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const pastYr  = state.past ? state.past.year : 'na';
+    const presYr  = state.present ? state.present.year : 'na';
+    const link = document.createElement('a');
+    link.download = `coastalwatch-${locName}-${pastYr}-vs-${presYr}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err => {
+    console.error('Export failed:', err);
+    setHint('Export failed — some tiles may block cross-origin capture.');
+  }).finally(() => {
+    btn.textContent = '📷 Export';
+    btn.disabled = false;
+  });
+}
+
+// =====================================================
+//  WATER INDEX (NDVI PROXY)
+// =====================================================
+let ndwiActive = false, ndwiLyr1 = null, ndwiLyr2 = null;
+
+function toggleNdwi() {
+  ndwiActive = !ndwiActive;
+  document.getElementById('btnNdwi').classList.toggle('active', ndwiActive);
+  document.getElementById('ndwiNote').style.display = ndwiActive ? '' : 'none';
+
+  if (ndwiActive) {
+    applyNdwi();
+  } else {
+    removeNdwi();
+  }
+}
+
+function applyNdwi() {
+  removeNdwi();
+
+  [{ side: 'past', map: map1, n: 1 }, { side: 'present', map: map2, n: 2 }].forEach(({ side, map, n }) => {
+    const ep = state[side];
+    if (!ep || ep.year < 2003) return; // MODIS era only
+
+    const moEl = document.getElementById(side === 'past' ? 'moPast' : 'moPresent');
+    const mo = moEl ? moEl.value : '07';
+    const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${ep.year}-${mo}-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+
+    const lyr = L.tileLayer(url, {
+      tileSize: 256, maxZoom: 9, noWrap: true, opacity: 0.55, attribution: ''
+    }).addTo(map);
+
+    if (n === 1) ndwiLyr1 = lyr; else ndwiLyr2 = lyr;
+  });
+}
+
+function removeNdwi() {
+  if (ndwiLyr1) { map1.removeLayer(ndwiLyr1); ndwiLyr1 = null; }
+  if (ndwiLyr2) { map2.removeLayer(ndwiLyr2); ndwiLyr2 = null; }
+}
+
+// =====================================================
+//  AI CHANGE ANALYSIS (Gemini Free + Anthropic)
+// =====================================================
+let aiProvider = 'free'; // 'free' (default), 'gemini', or 'anthropic'
+const PROXY_URL = 'https://coastalwatch-ai.YOUR_SUBDOMAIN.workers.dev/analyze';
+
+function toggleAI() {
+  const ov = document.getElementById('aiOverlay');
+  ov.classList.toggle('open');
+  if (ov.classList.contains('open') && aiProvider !== 'free') {
+    const storageKey = aiProvider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
+    const saved = localStorage.getItem(storageKey);
+    if (saved) document.getElementById('aiKey').value = saved;
+  }
+}
+
+function setAiProvider(provider) {
+  aiProvider = provider;
+  document.getElementById('provFree').classList.toggle('active', provider === 'free');
+  document.getElementById('provGemini').classList.toggle('active', provider === 'gemini');
+  document.getElementById('provAnthropic').classList.toggle('active', provider === 'anthropic');
+
+  const keyRow = document.getElementById('aiKeyRow');
+  const keyInput = document.getElementById('aiKey');
+  const noteEl = document.getElementById('aiKeyNote');
+
+  if (provider === 'free') {
+    keyRow.style.display = 'none';
+    noteEl.innerHTML = 'Powered by Gemini via CoastalWatch proxy \u2014 no key needed. 10 req/hr limit.';
+  } else if (provider === 'gemini') {
+    keyRow.style.display = '';
+    keyInput.placeholder = 'Google AI key \u2014 get free at aistudio.google.com';
+    noteEl.innerHTML = 'Gemini is free (250 req/day). Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline">aistudio.google.com</a>. Key stored in localStorage only.';
+  } else {
+    keyRow.style.display = '';
+    keyInput.placeholder = 'Anthropic API key (sk-ant-...)';
+    noteEl.innerHTML = 'Key stored in localStorage only. Never sent anywhere except api.anthropic.com.';
+  }
+
+  // Restore saved key for selected provider (skip for free)
+  if (provider !== 'free') {
+    const storageKey = provider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
+    const saved = localStorage.getItem(storageKey);
+    keyInput.value = saved || '';
+  }
+  document.getElementById('aiStatus').textContent = '';
+}
+
+function saveAiKey() {
+  const key = document.getElementById('aiKey').value.trim();
+  if (key) {
+    const storageKey = aiProvider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
+    localStorage.setItem(storageKey, key);
+    document.getElementById('aiStatus').textContent = 'Key saved.';
+  }
+}
+
+async function capturePanel(panelId) {
+  const el = document.getElementById(panelId);
+  const canvas = await html2canvas(el, {
+    useCORS: true,
+    backgroundColor: '#050d18',
+    scale: 1,
+    logging: false
+  });
+  return canvas.toDataURL('image/png').split(',')[1];
+}
+
+// Shared AI API call — used by both runAnalysis() and clipCompare()
+async function callAiApi(key, img1, img2, prompt) {
+  const geminiBody = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: 'image/png', data: img1 } },
+        { inline_data: { mime_type: 'image/png', data: img2 } },
+        { text: prompt }
+      ]
+    }]
+  };
+
+  let text, usageInfo;
+  const provLabel = aiProvider === 'free' ? 'Gemini (Free)' : aiProvider === 'gemini' ? 'Gemini' : 'Claude';
+
+  if (aiProvider === 'free') {
+    if (PROXY_URL.includes('YOUR_SUBDOMAIN')) {
+      throw new Error('Free proxy not deployed yet. Switch to Gemini and use your own free key from aistudio.google.com');
+    }
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody)
+    });
+    if (response.status === 429) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Rate limit reached \u2014 switch to Gemini tab and use your own free key from aistudio.google.com');
+    }
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Proxy error ${response.status}`);
+    }
+    const data = await response.json();
+    text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received.';
+    const meta = data.usageMetadata;
+    usageInfo = meta ? `${meta.promptTokenCount || '?'} input / ${meta.candidatesTokenCount || '?'} output tokens` : '';
+
+  } else if (aiProvider === 'gemini') {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Gemini API error ${response.status}`);
+    }
+    const data = await response.json();
+    text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received.';
+    const meta = data.usageMetadata;
+    usageInfo = meta ? `${meta.promptTokenCount || '?'} input / ${meta.candidatesTokenCount || '?'} output tokens` : '';
+
+  } else {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: img1 } },
+            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: img2 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${response.status}`);
+    }
+    const data = await response.json();
+    text = data.content?.[0]?.text || 'No response received.';
+    usageInfo = `${data.usage?.input_tokens || '?'} input / ${data.usage?.output_tokens || '?'} output tokens`;
+  }
+
+  return { text, usageInfo, provLabel };
+}
+
+// Simple markdown rendering
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^# (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^\d+\.\s/gm, match => '<br>' + match)
+    .replace(/^[-*]\s(.*$)/gm, '<li>$1</li>')
+    .replace(/\n/g, '<br>');
+}
+
+// Get current AI key (validates and returns it, or null)
+function getAiKey() {
+  if (aiProvider === 'free') return '';
+  const storageKey = aiProvider === 'gemini' ? 'cw_gemini_key' : 'cw_api_key';
+  const key = localStorage.getItem(storageKey) || document.getElementById('aiKey').value.trim();
+  if (!key) return null;
+  localStorage.setItem(storageKey, key);
+  return key;
+}
+
+async function runAnalysis() {
+  const key = getAiKey();
+  if (key === null) {
+    const provName = aiProvider === 'gemini' ? 'Google AI' : 'Anthropic';
+    document.getElementById('aiStatus').textContent = `Please enter your ${provName} API key first.`;
+    return;
+  }
+
+  if (!state.past || !state.present) {
+    document.getElementById('aiStatus').textContent = 'Select epochs on both panels before running analysis.';
+    return;
+  }
+
+  const btn = document.getElementById('aiRunBtn');
+  const status = document.getElementById('aiStatus');
+  const result = document.getElementById('aiResult');
+
+  btn.disabled = true;
+  btn.textContent = 'Capturing maps...';
+  status.textContent = '';
+  result.style.display = 'none';
+
+  try {
+    status.textContent = 'Capturing past panel...';
+    const img1 = await capturePanel('mv1');
+    status.textContent = 'Capturing present panel...';
+    const img2 = await capturePanel('mv2');
+
+    const locSel = document.getElementById('locSel');
+    const locName = locSel.selectedOptions[0]?.text || 'Unknown location';
+    const pastLabel = state.past.year + (state.past.needsMonth ? '-' + document.getElementById('moPast').value : '');
+    const presentLabel = state.present.year + (state.present.needsMonth ? '-' + document.getElementById('moPresent').value : '');
+
+    status.textContent = 'Sending to AI for analysis...';
+    btn.textContent = 'Analyzing...';
+
+    const prompt = `You are a remote sensing and coastal geomorphology expert analyzing satellite imagery of ${locName}.
+
+Image 1 (LEFT): ${pastLabel} \u2014 ${state.past.res}
+Image 2 (RIGHT): ${presentLabel} \u2014 ${state.present.res}
+
+Compare these two satellite images and provide a structured analysis:
+
+1. **Visible Changes**: What shoreline, land cover, or water body changes can you observe between the two dates?
+2. **Erosion / Accretion**: Are there areas where land has been lost to the sea (erosion) or where new land has formed (accretion)?
+3. **Urban / Infrastructure Changes**: Any visible development, reclamation, or human-modified coastline?
+4. **Environmental Indicators**: Changes in vegetation, water turbidity, sediment plumes, or other environmental signals?
+5. **Severity Assessment**: Rate the overall coastal change severity (Minimal / Moderate / Significant / Severe) with brief justification.
+
+Keep the analysis concise and actionable. Note any limitations due to image resolution or cloud cover.`;
+
+    const { text, usageInfo, provLabel } = await callAiApi(key, img1, img2, prompt);
+
+    result.innerHTML = `<strong style="color:var(--teal)">${locName} \u2014 ${pastLabel} vs ${presentLabel}</strong> <span style="font-size:10px;color:#7aaac0">(${provLabel})</span><br><br>${renderMarkdown(text)}`;
+    result.style.display = 'block';
+    status.textContent = `Analysis complete \u00b7 ${provLabel} \u00b7 ${usageInfo}`;
+
+  } catch (err) {
+    status.innerHTML = '<span style="color:var(--red)">Error:</span> ' + err.message;
+    result.innerHTML = '';
+    result.style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Analysis';
+  }
+}
+
+// =====================================================
+//  CLIP COMPARE — AI analysis of clipped region
+// =====================================================
+async function clipCompare() {
+  if (!clipBounds) {
+    setHint('No clip rectangle drawn. Activate Clip Compare and drag a rectangle first.');
+    return;
+  }
+  if (!state.past || !state.present) {
+    setHint('Select epochs on both panels before comparing.');
+    return;
+  }
+
+  const key = getAiKey();
+
+  // Open AI overlay
+  const ov = document.getElementById('aiOverlay');
+  if (!ov.classList.contains('open')) ov.classList.add('open');
+
+  if (key === null) {
+    const provName = aiProvider === 'gemini' ? 'Google AI' : 'Anthropic';
+    document.getElementById('aiStatus').textContent = `Please enter your ${provName} API key first.`;
+    return;
+  }
+
+  const btn = document.getElementById('aiRunBtn');
+  const status = document.getElementById('aiStatus');
+  const result = document.getElementById('aiResult');
+
+  btn.disabled = true;
+  btn.textContent = 'Capturing clips...';
+  status.textContent = '';
+  result.style.display = 'none';
+
+  try {
+    status.textContent = 'Capturing clipped past area...';
+    const img1 = await captureClip(1);
+    status.textContent = 'Capturing clipped present area...';
+    const img2 = await captureClip(2);
+
+    const locSel = document.getElementById('locSel');
+    const locName = locSel.selectedOptions[0]?.text || 'Unknown location';
+    const pastLabel = state.past.year + (state.past.needsMonth ? '-' + document.getElementById('moPast').value : '');
+    const presentLabel = state.present.year + (state.present.needsMonth ? '-' + document.getElementById('moPresent').value : '');
+
+    status.textContent = 'Sending clipped regions to AI...';
+    btn.textContent = 'Analyzing clip...';
+
+    const prompt = `You are a remote sensing and coastal geomorphology expert. You are analyzing a ZOOMED-IN, CLIPPED region of satellite imagery from ${locName}.
+
+Image 1 (PAST clip): ${pastLabel} \u2014 ${state.past.res}
+Image 2 (PRESENT clip): ${presentLabel} \u2014 ${state.present.res}
+
+These images show the EXACT SAME geographic area, clipped from synchronized map panels. Focus your analysis specifically on this selected region:
+
+1. **Shoreline Movement**: Describe any visible shoreline advance or retreat in this specific area. Estimate displacement in approximate meters if possible.
+2. **Land/Water Changes**: Has land become water or vice versa? Describe the extent.
+3. **Surface Changes**: Changes in sediment, vegetation, built structures, or sand deposits visible in this clip.
+4. **Change Assessment**: Rate the change in this specific area (Minimal / Moderate / Significant / Severe).
+
+Be precise and focused \u2014 this is a targeted clip, not a full panel. The user selected this area because they want detailed analysis of this specific region.`;
+
+    const { text, usageInfo, provLabel } = await callAiApi(key, img1, img2, prompt);
+
+    result.innerHTML = `<strong style="color:var(--teal)">CLIP: ${locName} \u2014 ${pastLabel} vs ${presentLabel}</strong> <span style="font-size:10px;color:#7aaac0">(${provLabel} \u00b7 clipped region)</span><br><br>${renderMarkdown(text)}`;
+    result.style.display = 'block';
+    status.textContent = `Clip analysis complete \u00b7 ${provLabel} \u00b7 ${usageInfo}`;
+
+  } catch (err) {
+    status.innerHTML = '<span style="color:var(--red)">Error:</span> ' + err.message;
+    result.innerHTML = '';
+    result.style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Analysis';
+  }
+}
+
+// =====================================================
+//  INIT — auto-select 2018 (past) vs 2024 (present)
+// =====================================================
+buildStrips();
+setTimeout(() => {
+  // Force Leaflet to recalculate map sizes (fixes blank tiles)
+  map1.invalidateSize();
+  map2.invalidateSize();
+
+  const pPast = document.querySelector('.epoch-pill[data-year="2018"][data-side="past"]');
+  const pPres = document.querySelector('.epoch-pill[data-year="2024"][data-side="present"]');
+  if (pPast) pPast.click();
+  if (pPres) pPres.click();
+
+  // Auto-show tour for first-time visitors
+  if (!localStorage.getItem('cw_toured')) {
+    setTimeout(() => { startTour(); localStorage.setItem('cw_toured', '1'); }, 800);
+  }
+}, 300);
+</script>
+</body>
+</html>

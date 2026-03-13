@@ -1,0 +1,17 @@
+{
+  "name": "coastalwatch",
+  "version": "1.0.0",
+  "description": "Multi-decade coastal shoreline change analysis using Landsat, MODIS, and Sentinel-2 satellite imagery",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000 --no-clipboard",
+    "dev": "npx live-server --port=3000 --open=index.html"
+  },
+  "keywords": ["satellite", "coastline", "landsat", "sentinel2", "leaflet", "geospatial"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.0.0",
+    "live-server": "^1.2.2"
+  }
+}
